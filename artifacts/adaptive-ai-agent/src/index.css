@@ -148,6 +148,21 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .message.user .message-meta { text-align: right; }
 .message-bubble { border: 1px solid hsl(var(--border)); border-radius: 3px 13px 13px 13px; padding: 14px 16px; background: hsl(var(--card)); color: hsl(var(--foreground)); font-size: 14px; line-height: 1.65; }
 .message.user .message-bubble { border-color: hsl(var(--accent) / .55); border-radius: 13px 3px 13px 13px; background: hsl(var(--accent) / .22); }
+.message-markdown > :first-child { margin-top: 0; }
+.message-markdown > :last-child { margin-bottom: 0; }
+.message-markdown p { margin: 0 0 12px; }
+.message-markdown h1, .message-markdown h2, .message-markdown h3 { margin: 18px 0 8px; font-weight: 650; line-height: 1.25; }
+.message-markdown h1 { font-size: 1.25em; }
+.message-markdown h2 { font-size: 1.12em; }
+.message-markdown h3 { font-size: 1em; }
+.message-markdown ul, .message-markdown ol { margin: 0 0 12px; padding-left: 22px; }
+.message-markdown li + li { margin-top: 4px; }
+.message-markdown blockquote { margin: 12px 0; padding-left: 13px; border-left: 2px solid hsl(var(--accent)); color: hsl(var(--foreground) / .78); }
+.message-markdown :not(pre) > code { border: 1px solid hsl(var(--border)); border-radius: 4px; padding: 1px 5px; background: hsl(var(--muted)); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; }
+.markdown-code-block { overflow: hidden; margin: 14px 0; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--muted) / .55); }
+.markdown-code-label { border-bottom: 1px solid hsl(var(--border)); padding: 6px 10px; color: hsl(var(--muted-foreground)); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; text-transform: lowercase; }
+.markdown-code-block pre { overflow-x: auto; margin: 0; padding: 12px; }
+.markdown-code-block pre code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86em; line-height: 1.6; white-space: pre; }
 .typing-bubble { display: flex; gap: 4px; align-items: center; padding: 17px 18px; }
 .typing-bubble i { width: 5px; height: 5px; border-radius: 50%; background: hsl(var(--primary)); animation: blink 1.2s infinite; }
 .typing-bubble i:nth-child(2) { animation-delay: .15s; }.typing-bubble i:nth-child(3) { animation-delay: .3s; }

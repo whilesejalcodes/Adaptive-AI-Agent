@@ -1,5 +1,6 @@
 import { ArrowUp, Clock3, FileText, History, MoreHorizontal, Plus, Sparkles, ThumbsDown, ThumbsUp, X } from 'lucide-react';
-import { FormEvent, useEffect, useState } from 'react';
+import { Children, FormEvent, isValidElement, useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Link } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -37,6 +38,39 @@ function initials(value: string): string {
   return value.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 }
 
+function MarkdownPre({ children }: { children?: ReactNode }) {
+  const firstChild = Children.toArray(children)[0];
+  const codeClassName = isValidElement(firstChild)
+    ? (firstChild as ReactElement<{ className?: string }>).props.className
+    : undefined;
+  const language = codeClassName?.match(/language-([\w+-]+)/)?.[1];
+
+  return (
+    <div className="markdown-code-block">
+      <div className="markdown-code-label">{language ?? 'code'}</div>
+      <pre>{children}</pre>
+    </div>
+  );
+}
+
+function MarkdownResponse({ text }: { text: string }) {
+  return (
+    <div className="message-markdown">
+      <ReactMarkdown
+        components={{
+          pre: MarkdownPre,
+          code: ({ className, children, ...props }) => {
+            const inline = !className && !String(children).includes('\n');
+            return <code className={className} data-inline={inline || undefined} {...props}>{children}</code>;
+          },
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 function Message({
   message,
   userInitials,
@@ -59,7 +93,7 @@ function Message({
       <div className="message-avatar" aria-hidden="true">{isUser ? userInitials : 'a/'}</div>
       <div className="message-content">
         <div className="message-meta">{isUser ? 'you' : 'adaptive'} · {messageTime(message.timestamp)}</div>
-        <div className="message-bubble">{message.text}</div>
+        <div className="message-bubble">{isUser ? message.text : <MarkdownResponse text={message.text} />}</div>
         {!isUser && (
           <div className="mt-2 flex items-center gap-1">
             <button className={`icon-btn ${feedback === 'up' ? 'text-[hsl(var(--primary))]' : ''}`} type="button" onClick={() => feedbackClick('up')} aria-label="Helpful response" data-testid={`button-feedback-up-${message.id}`}><ThumbsUp size={13} /></button>
