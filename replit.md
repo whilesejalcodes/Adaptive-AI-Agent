@@ -11,13 +11,14 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - Firebase web configuration uses the `VITE_FIREBASE_*` environment variables.
 - Firebase Admin uses `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`.
+- Server-side Gemini generation uses `GEMINI_API_KEY`; `GEMINI_MODEL` optionally overrides the supported low-cost default.
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - Web: React, Vite, Tailwind CSS, Wouter, Firebase Authentication
-- API: Express 5, Firebase Admin
-- Canonical Phase 2 data store: Cloud Firestore
+- API: Express 5, Firebase Admin, official Google Gemini SDK
+- Canonical application data store: Cloud Firestore
 - API contracts: OpenAPI, Orval-generated TypeScript and Zod clients
 - Validation: Zod (`zod/v4`)
 - API codegen: Orval (from OpenAPI spec)
@@ -36,6 +37,7 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 
 - Firebase Authentication runs in the browser; verified Firebase ID tokens protect API routes.
 - Firebase Admin credentials and Firestore writes for conversations/messages remain server-side.
+- Gemini API calls and credentials remain server-side; the browser receives only the generated response or a safe application error.
 - Firestore root collections are `users`, `conversations`, and `messages`; ownership comes from the verified UID.
 - API contracts are defined in OpenAPI and generated into shared client/server packages.
 - The web application is rooted at `/` so the primary preview is immediately visible.
@@ -44,8 +46,8 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 
 - Phase 1 established the conversation workspace and memory dashboard surfaces.
 - Phase 2 adds Firebase email/password authentication plus user-owned Firestore conversations and messages.
-- The Phase 2 assistant response is intentionally deterministic: `Phase 2 Firebase Echo: [User Text]`.
-- Later phases will add Gemini responses, Qdrant retrieval, persistent memory, tools, and application-level feedback adaptation.
+- Phase 3 replaces the deterministic Echo with context-aware Gemini responses generated and persisted by the API server.
+- Later phases will add Qdrant retrieval, persistent memory, tools, and application-level feedback adaptation.
 
 ## User preferences
 

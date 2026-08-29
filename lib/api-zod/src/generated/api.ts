@@ -72,7 +72,7 @@ export const ListConversationMessagesResponse = zod.array(ListConversationMessag
 
 
 /**
- * @summary Store a user message and Firebase Echo response
+ * @summary Store a user message and generate a Gemini response
  */
 
 

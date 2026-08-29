@@ -182,7 +182,7 @@ export function ChatPage() {
               {isThinking && (
                 <article className="message" data-testid="status-assistant-thinking">
                   <div className="message-avatar" aria-hidden="true">a/</div>
-                  <div className="message-content"><div className="message-meta">adaptive · saving</div><div className="message-bubble typing-bubble"><i /><i /><i /></div></div>
+                  <div className="message-content"><div className="message-meta">adaptive · thinking</div><div className="message-bubble typing-bubble"><i /><i /><i /></div></div>
                 </article>
               )}
             </div>
@@ -192,7 +192,7 @@ export function ChatPage() {
               <textarea value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write into the thread…" aria-label="Message adaptive" rows={1} maxLength={4000} data-testid="input-message" />
               <button className="send-btn" type="submit" disabled={!draft.trim() || isThinking} aria-label="Send message" data-testid="button-send-message"><ArrowUp size={17} /></button>
             </form>
-            <div className="mt-2 flex items-center justify-between px-1 text-[10px] text-[hsl(var(--muted-foreground))]"><span>Phase 2 uses a deterministic Firebase Echo response.</span><span className="font-mono">return ↵</span></div>
+            <div className="mt-2 flex items-center justify-between px-1 text-[10px] text-[hsl(var(--muted-foreground))]"><span>Gemini responds using this conversation as context.</span><span className="font-mono">return ↵</span></div>
           </div>
         </section>
         <aside className="chat-side">
@@ -209,7 +209,7 @@ export function ChatPage() {
           </div>
           <div className="card side-card">
             <h3 className="flex items-center gap-2"><BrainIcon /> Held in context</h3>
-            <div className="memory-mini"><span>01</span><p>Long-term memory retrieval is intentionally deferred to Phase 3.</p></div>
+            <div className="memory-mini"><span>01</span><p>Long-term memory retrieval is intentionally deferred to a later phase.</p></div>
             <Link href="/memories" className="btn btn-link btn-small mt-2" data-testid="link-view-memories">Inspect memory preview <ArrowUp size={13} className="rotate-45" /></Link>
           </div>
           <div className="rounded-xl border border-dashed border-[hsl(var(--border))] p-4 text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]"><FileText size={15} className="mb-2 text-[hsl(var(--primary))]" />Conversations and messages persist in Firestore. Memory extraction does not run in this phase.</div>

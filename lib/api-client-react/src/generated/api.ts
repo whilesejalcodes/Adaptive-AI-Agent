@@ -368,7 +368,7 @@ export const getSendConversationMessageUrl = (conversationId: string,) => {
 }
 
 /**
- * @summary Store a user message and Firebase Echo response
+ * @summary Store a user message and generate a Gemini response
  */
 export const sendConversationMessage = async (conversationId: string,
     messageInput: MessageInput, options?: Parameters<typeof customFetch>[1]): Promise<MessageExchange> => {
@@ -418,7 +418,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type SendConversationMessageMutationError = ErrorType<ErrorResponse>
 
     /**
- * @summary Store a user message and Firebase Echo response
+ * @summary Store a user message and generate a Gemini response
  */
 export const useSendConversationMessage = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendConversationMessage>>, TError,{conversationId: string;data: BodyType<MessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}

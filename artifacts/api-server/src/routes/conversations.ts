@@ -11,6 +11,12 @@ import {
 } from "@workspace/api-zod";
 import { Timestamp } from "firebase-admin/firestore";
 import { firestore } from "../lib/firebase-admin";
+import {
+  generateGeminiReply,
+  GEMINI_HISTORY_LIMIT,
+  GeminiGenerationError,
+  type GeminiConversationMessage,
+} from "../lib/gemini";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -262,19 +268,34 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
       text,
       timestamp: now,
     };
+
+    await userMessageReference.set(userMessage);
+
+    const historySnapshot = await messages
+      .where("conversationId", "==", parsedParams.data.conversationId)
+      .limit(GEMINI_HISTORY_LIMIT)
+      .get();
+    const historyDocuments = historySnapshot.docs
+      .map((document) => messageFromSnapshot(document))
+      .filter((message) => message.id !== userMessage.id);
+    historyDocuments.push(userMessage);
+    const history: GeminiConversationMessage[] = historyDocuments
+      .sort((left, right) => left.timestamp.toMillis() - right.timestamp.toMillis())
+      .slice(-GEMINI_HISTORY_LIMIT)
+      .map(({ role, text }) => ({ role, text }));
+    const assistantText = await generateGeminiReply(history);
     const assistantMessage: MessageDocument = {
       id: assistantMessageReference.id,
       conversationId: parsedParams.data.conversationId,
       userId,
       role: "model",
-      text: `Phase 2 Firebase Echo: ${text}`,
-      timestamp: now,
+      text: assistantText,
+      timestamp: Timestamp.now(),
     };
 
     const batch = firestore.batch();
-    batch.set(userMessageReference, userMessage);
     batch.set(assistantMessageReference, assistantMessage);
-    batch.update(conversation.ref, { updatedAt: now });
+    batch.update(conversation.ref, { updatedAt: assistantMessage.timestamp });
     await batch.commit();
 
     const data = {
@@ -282,7 +303,27 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
       assistantMessage: serializeMessage(assistantMessage),
     };
     res.status(201).json(SendConversationMessageResponse.parse(data));
-  } catch {
+  } catch (error) {
+    if (error instanceof GeminiGenerationError) {
+      req.log.warn({ kind: error.kind }, "Gemini generation failed");
+      const status = error.kind === "timeout"
+        ? 504
+        : error.kind === "configuration" || error.kind === "rate-limit"
+          ? 503
+          : 502;
+      const message = error.kind === "configuration"
+        ? "The AI service is not configured."
+        : error.kind === "authentication"
+          ? "The AI service could not authenticate."
+          : error.kind === "rate-limit" || error.kind === "timeout"
+            ? "The AI service is temporarily unavailable. Please try again."
+            : error.kind === "empty-response"
+              ? "The AI service returned an empty response. Please try again."
+              : "The AI service could not generate a response. Please try again.";
+      res.status(status).json({ error: message });
+      return;
+    }
+
     req.log.error("Failed to store conversation messages");
     res.status(500).json({ error: "Unable to save the message." });
   }
