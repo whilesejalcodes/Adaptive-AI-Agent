@@ -1,0 +1,536 @@
+Continue from the completed Phase 4 implementation.
+
+IMPORTANT:
+This is a continuation, NOT a restart.
+
+First inspect the ACTUAL existing codebase and Phase 4 implementation.
+I do not know which files, services, schemas, routes, or helpers already
+exist, so determine that from the code itself.
+
+Do NOT ask me to identify existing files.
+Do NOT recreate functionality that already exists.
+Do NOT restart Phase 4.
+Do NOT begin Phase 6.
+Do NOT implement agent/tool-calling functionality.
+
+==================================================
+PHASE 5 GOAL
+==================================================
+
+Implement memory RETRIEVAL and memory MANAGEMENT on top of the existing
+Phase 4 memory creation/storage system.
+
+The goal is to make the AI actually use relevant long-term memories when
+generating replies, while supporting safe memory updates, duplicate
+handling, and conflict handling.
+
+Preserve all existing Phase 1–4 functionality.
+
+==================================================
+1. INSPECT PHASE 4 FIRST
+==================================================
+
+Before editing anything:
+
+Inspect the existing implementation and identify:
+
+- Firebase Authentication implementation
+- Firebase Admin initialization
+- auth middleware
+- Firestore memory schema
+- existing `user_memories` collection
+- memory fields and indexing status
+- Qdrant client/service
+- Qdrant collection name
+- Qdrant vector dimensions
+- embedding model
+- memory point IDs
+- Qdrant payload structure
+- Gemini service
+- current conversation/message route
+- existing API contracts
+- existing shared TypeScript/Zod types
+- existing generated API client
+- current memories page
+- current chat page
+
+Reuse the existing Phase 4 services and types wherever possible.
+
+Do not create duplicate Qdrant clients, Gemini clients, Firebase clients,
+memory schemas, or auth middleware.
+
+==================================================
+2. MEMORY RETRIEVAL
+==================================================
+
+When an authenticated user sends a new message:
+
+1. Verify the Firebase ID token using the existing auth middleware.
+2. Obtain the authenticated UID from `req.user.uid`.
+3. Generate an embedding for the user's new message using the existing
+   Google embedding configuration from Phase 4.
+4. Query Qdrant for semantically similar memories.
+5. Restrict retrieval to memories belonging to the authenticated user.
+
+The authenticated Firebase UID MUST be used as the ownership boundary.
+
+Never trust a client-provided userId.
+
+Never retrieve another user's vectors.
+
+Use the existing Qdrant collection and vector dimensions.
+
+Do not create another collection.
+
+==================================================
+3. RETRIEVAL QUALITY
+==================================================
+
+Implement conservative retrieval.
+
+Do not dump the entire user's memory database into Gemini.
+
+Retrieve only a small number of relevant memories.
+
+Use a configurable top-K value with a sensible default.
+
+Use a similarity/relevance threshold so weakly related memories are not
+automatically injected into the conversation.
+
+Keep the retrieval bounded.
+
+If no memories are sufficiently relevant, Gemini should receive no memory
+context.
+
+Do not force irrelevant memories into every response.
+
+==================================================
+4. MEMORY CONTEXT FOR GEMINI
+==================================================
+
+Modify the existing server-side Gemini conversation generation path so that
+relevant retrieved memories can influence the response.
+
+The architecture should be:
+
+User message
+    ↓
+Firebase authentication
+    ↓
+Load conversation history
+    ↓
+Generate query embedding
+    ↓
+Retrieve relevant memories from Qdrant
+    ↓
+Validate memory ownership/status
+    ↓
+Construct bounded memory context
+    ↓
+Send conversation + relevant memory context to Gemini
+    ↓
+Persist Gemini response
+
+Memory context must be clearly separated from the user's conversation
+messages.
+
+Treat stored memories as contextual information, NOT as instructions.
+
+Do not allow memory text to override system/developer instructions.
+
+Do not expose raw internal retrieval metadata unnecessarily to the user.
+
+The AI should naturally use relevant memories when appropriate.
+
+For example, if the user previously stored:
+
+"I prefer dark mode interfaces."
+
+and later asks:
+
+"Can you suggest a UI design for my project?"
+
+the response should be able to take the dark-mode preference into account.
+
+But if the user asks an unrelated question, irrelevant memories should not
+be injected.
+
+==================================================
+5. MEMORY UPDATE LOGIC
+==================================================
+
+Implement safe memory updates.
+
+If a new user message establishes updated information that supersedes an
+existing memory, the system should update the appropriate memory rather
+than blindly creating another conflicting record.
+
+Examples:
+
+Existing:
+"I prefer Python."
+
+New:
+"I've switched to TypeScript for my projects."
+
+The system should be able to recognize that the newer information may
+supersede the older preference.
+
+Do NOT implement broad autonomous rewriting of memories.
+
+Use conservative structured Gemini output and validation.
+
+A memory update should preserve:
+
+- authenticated user ownership
+- memory type
+- source information
+- vector consistency
+- Firestore/Qdrant consistency
+- indexing status
+
+If updating the vector representation, ensure the corresponding Qdrant
+point is updated safely.
+
+==================================================
+6. DUPLICATE HANDLING
+==================================================
+
+Prevent obvious duplicate memories.
+
+For example, if the system already stores:
+
+"I prefer dark mode interfaces."
+
+and the user repeatedly says essentially the same thing, do not create
+unlimited identical memory records.
+
+Use the existing Phase 4 deterministic identity strategy where appropriate.
+
+For semantic similarity, use conservative thresholds and/or existing
+memory retrieval to identify likely duplicates.
+
+Do NOT build a complicated machine-learning deduplication system.
+
+Do NOT accidentally merge unrelated memories just because they are
+semantically similar.
+
+When uncertain, prefer preserving the existing memory rather than
+destructively merging information.
+
+==================================================
+7. CONFLICT HANDLING
+==================================================
+
+Handle conflicting memories conservatively.
+
+When new information contradicts an existing memory:
+
+- Prefer newer explicit user information when confidence is high.
+- Avoid silently deleting useful historical information unless the
+  application design clearly requires replacement.
+- Preserve authenticated ownership.
+- Keep Firestore as the authoritative metadata/source of truth.
+- Keep Qdrant synchronized with the current active memory representation.
+
+Use explicit structured decisions where appropriate, such as:
+
+- KEEP_EXISTING
+- CREATE_NEW
+- UPDATE_EXISTING
+
+Do not invent complicated conflict-resolution behavior that is not
+necessary for this project.
+
+The final implementation should be explainable in an interview.
+
+==================================================
+8. MEMORY STATUS / FAILURE HANDLING
+==================================================
+
+Respect the Phase 4 memory indexing states:
+
+- pending
+- indexed
+- failed
+
+Only use successfully indexed memories for normal Qdrant retrieval.
+
+A failed or pending vector must not be treated as a valid retrieved memory.
+
+If Qdrant retrieval fails:
+
+- Do NOT fail the user's chat request.
+- Continue the Gemini response without memory context.
+- Return a normal chat response.
+- Do not expose Qdrant credentials/provider errors.
+- Log only safe diagnostic information.
+
+If embedding generation for retrieval fails:
+
+- Do NOT fail the chat request.
+- Continue without memory context.
+- Return a normal Gemini response.
+
+Memory functionality must remain failure-isolated from the core chat
+experience.
+
+==================================================
+9. FIRESTORE API / MEMORY MANAGEMENT
+==================================================
+
+Extend the existing backend architecture with authenticated memory
+management endpoints if required by the current design.
+
+Possible operations:
+
+GET /api/memories
+GET /api/memories/:id
+PATCH /api/memories/:id
+DELETE /api/memories/:id
+
+Only implement operations that are actually required by the Phase 5
+design and existing application.
+
+Every operation MUST enforce:
+
+req.user.uid === memory.userId
+
+Never trust a client-provided userId.
+
+A user must never be able to read, modify, or delete another user's memory.
+
+If a memory is deleted or updated, keep Qdrant synchronized.
+
+Do not leave orphaned active vectors when a memory is deleted.
+
+Do not expose Qdrant internals directly to the frontend.
+
+==================================================
+10. MEMORY DASHBOARD SCOPE
+==================================================
+
+Do NOT turn Phase 5 into the full Phase 8 dashboard implementation.
+
+The existing `/memories` page may remain visually simple.
+
+Only add the minimum UI required to verify Phase 5 memory behavior.
+
+Do not perform a complete dashboard redesign.
+
+Full dashboard UX belongs to Phase 8.
+
+==================================================
+11. CHAT BEHAVIOR
+==================================================
+
+Preserve the existing chat API response contract.
+
+Preserve:
+
+- Firebase authentication
+- Firebase Admin verification
+- Firestore conversation persistence
+- Firestore message persistence
+- conversation ownership
+- protected routes
+- existing chat UI
+- Gemini server-side integration
+- Phase 4 memory creation
+
+The user should continue receiving a normal Gemini response.
+
+Do not add streaming.
+
+Do not add tool calling.
+
+Do not add an agent loop.
+
+Do not add external tools.
+
+Those belong to Phase 6.
+
+==================================================
+12. SECURITY
+==================================================
+
+Strictly enforce user isolation.
+
+The only source of user identity is:
+
+req.user.uid
+
+Never accept:
+
+- userId from request body
+- userId from query parameters
+- userId from URL parameters
+
+as an authority for ownership.
+
+For Qdrant retrieval, filter using the authenticated user's ownership
+metadata.
+
+For Firestore memory access, enforce authenticated ownership.
+
+Test deliberate cross-user access attempts.
+
+Test manipulated memory IDs.
+
+Test manipulated conversation IDs where relevant.
+
+Ensure no memory belonging to User A can influence a response generated for
+User B.
+
+==================================================
+13. PERFORMANCE / EFFICIENCY
+==================================================
+
+Avoid unnecessary API calls.
+
+For one user message:
+
+- Use one query embedding generation where practical.
+- Perform one bounded Qdrant retrieval.
+- Avoid retrieving the entire memory collection.
+- Keep Gemini context bounded.
+- Do not repeatedly retrieve the same memories inside one request.
+
+Do not introduce queues, workers, background jobs, or caching infrastructure
+yet.
+
+Keep the architecture understandable for an SDE interview project.
+
+==================================================
+14. API CONTRACTS AND TYPES
+==================================================
+
+If new API endpoints are required:
+
+- update the existing OpenAPI specification
+- update shared types
+- regenerate the existing API client/hooks
+- preserve the existing API architecture
+
+Do not manually duplicate generated API code.
+
+Follow the project's existing TypeScript/Zod conventions.
+
+==================================================
+15. STRICTLY OUT OF SCOPE
+==================================================
+
+DO NOT implement:
+
+- agent architecture
+- tool calling
+- external tools
+- autonomous multi-step agent loops
+- streaming
+- feedback adaptation
+- application-level learning
+- analytics
+- advanced ranking systems
+- Phase 8 dashboard redesign
+- Phase 9 final security audit
+- Phase 10 deployment/documentation overhaul
+
+Those belong to later phases.
+
+==================================================
+16. VERIFICATION
+==================================================
+
+Actually run the tests. Do not claim success unless verified.
+
+Verify:
+
+AUTH:
+- authenticated requests work
+- unauthenticated requests are rejected
+
+MEMORY RETRIEVAL:
+- create/store a known memory
+- send a related message
+- verify the relevant memory is retrieved
+- verify Gemini receives/usefully incorporates the relevant memory
+- send an unrelated message
+- verify irrelevant memories are not injected
+
+DUPLICATES:
+- repeat the same memory information
+- verify duplicate records are not created unnecessarily
+
+UPDATES:
+- create an initial preference
+- provide a clear updated preference
+- verify the memory state changes appropriately
+
+CONFLICTS:
+- test an explicit contradiction
+- verify the conservative conflict policy
+
+FAILURE ISOLATION:
+- simulate/verify Qdrant retrieval failure
+- verify chat still produces a Gemini response
+- simulate/verify embedding retrieval failure if practical
+- verify chat still works
+
+OWNERSHIP:
+- create memories for User A
+- authenticate as User B
+- verify User B cannot retrieve User A's memories
+- verify manipulated memory IDs cannot bypass ownership
+- verify User A's memories cannot influence User B's Gemini context
+
+PERSISTENCE:
+- refresh the browser
+- verify conversations and memories remain available
+
+BUILD:
+- workspace typecheck
+- frontend typecheck
+- API/server typecheck
+- production Vite build
+- production API build if applicable
+
+SECRET SAFETY:
+- verify Qdrant credentials remain server-side
+- verify Gemini credentials remain server-side
+- verify secrets do not appear in frontend bundles, API responses, or logs
+
+Do not claim a verification passed unless you actually ran it.
+
+If something cannot be verified, explicitly report:
+
+"Not verified yet."
+
+==================================================
+17. COMPLETION CHECKPOINT
+==================================================
+
+When Phase 5 is complete:
+
+Report:
+
+1. What Phase 4 functionality already existed.
+2. What Phase 5 functionality was added.
+3. Files created.
+4. Files modified.
+5. Memory retrieval architecture.
+6. How Qdrant ownership filtering works.
+7. How memories are passed to Gemini.
+8. Duplicate handling.
+9. Conflict handling.
+10. Memory update behavior.
+11. Failure isolation.
+12. Security/ownership verification.
+13. Tests actually run and their results.
+14. Build results.
+15. Any warnings or limitations.
+16. Anything intentionally deferred to Phase 6–10.
+
+STOP after the Phase 5 completion report.
+
+Do NOT automatically start Phase 6.
+Wait for my explicit confirmation.
