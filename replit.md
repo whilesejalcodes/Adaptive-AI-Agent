@@ -1,44 +1,53 @@
-# [Project name]
+# Adaptive AI Agent
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A personal AI workspace that uses persistent memory and feedback to make future conversations more relevant.
 
 ## Run & Operate
 
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/adaptive-ai-agent run dev` — run the web app
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required environment variables will be added as external services are introduced.
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- Web: React, Vite, Tailwind CSS, Wouter
 - API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
+- API contracts: OpenAPI, Orval-generated TypeScript and Zod clients
+- Validation: Zod (`zod/v4`)
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/adaptive-ai-agent/` — React/Vite web application
+- `artifacts/api-server/` — shared Express API service
+- `lib/api-spec/openapi.yaml` — API contract source of truth
+- `lib/api-client-react/` — generated React Query client hooks
+- `lib/api-zod/` — generated server-side Zod schemas
+- `artifacts/adaptive-ai-agent/src/index.css` — application theme and design tokens
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The initial product shell is built before external AI and authentication integrations.
+- API contracts are defined in OpenAPI and generated into shared client/server packages.
+- The web application is rooted at `/` so the primary preview is immediately visible.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Phase 1 establishes the conversation workspace and memory dashboard surfaces.
+- Later phases will add Firebase Authentication, Firestore persistence, Gemini responses, Qdrant retrieval, and application-level feedback adaptation.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Keep the implementation incremental and stop after each approved development phase.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Run API code generation after every OpenAPI contract change before importing generated hooks.
 
 ## Pointers
 

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Adaptive AI Agent"
+description = "A thoughtful personal AI workspace that makes long-term memory visible, understandable, and useful across conversations. Phase 1 provides the responsive product shell for chat and memory management."
+version = "1.0.0"
+id = "artifacts/adaptive-ai-agent"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23385
+
+[services.development]
+run = "pnpm --filter @workspace/adaptive-ai-agent run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/adaptive-ai-agent", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/adaptive-ai-agent/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23385"
+BASE_PATH = "/"
