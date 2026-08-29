@@ -1,0 +1,586 @@
+Continue Phase 3 from the existing completed Phase 2 implementation.
+
+IMPORTANT:
+
+First inspect the EXISTING project and understand the current Phase 2
+implementation before making changes.
+
+Phase 2 is complete and must be preserved.
+
+Do NOT restart Phase 3.
+Do NOT redo Firebase Authentication or Firestore implementation unless a
+small compatibility change is strictly necessary for Gemini integration.
+
+Do NOT begin Phase 4.
+
+Do NOT implement Qdrant, embeddings, semantic memory, memory extraction,
+memory retrieval, memory updates, conflict handling, agent architecture,
+tool calling, or feedback adaptation.
+
+==================================================
+PHASE 3 GOAL
+==================================================
+
+Replace the Phase 2 deterministic Firebase Echo response with a real Gemini
+AI response while preserving the existing Firebase authentication,
+Firestore persistence, protected routes, and Phase 1 UI.
+
+The final Phase 3 flow should be:
+
+User
+  ↓
+React chat UI
+  ↓
+Authenticated API request
+  ↓
+Firebase ID token
+  ↓
+Express backend
+  ↓
+Firebase Admin authentication
+  ↓
+Gemini API
+  ↓
+AI response
+  ↓
+Firestore message persistence
+  ↓
+React chat UI
+
+Gemini must be called SERVER-SIDE.
+
+==================================================
+1. INSPECT EXISTING IMPLEMENTATION
+==================================================
+
+Before changing anything, inspect:
+
+- package.json files
+- existing Gemini-related dependencies
+- Firebase configuration
+- Firebase Admin initialization
+- authentication middleware
+- req.user implementation
+- existing chat routes
+- existing conversation/message services
+- existing API client
+- existing generated API types/hooks
+- existing React chat components
+- environment variable configuration
+- existing error handling
+
+Determine exactly what already exists.
+
+Do NOT recreate existing functionality.
+
+Do NOT create duplicate Firebase initialization,
+authentication middleware, API clients, or chat routes.
+
+Briefly identify the existing Phase 2 chat flow before implementing Phase 3.
+
+==================================================
+2. GEMINI API INTEGRATION
+==================================================
+
+Integrate the Gemini API using the current official Google Gemini SDK/API
+approach compatible with the project's installed dependencies.
+
+Before installing anything:
+
+- Inspect package.json.
+- Use the existing package if Gemini is already installed.
+- If Gemini is not installed, install only the required Gemini dependency.
+- Do not upgrade unrelated dependencies.
+
+The Gemini API key must be stored as a server-side environment variable.
+
+Use an environment variable such as:
+
+GEMINI_API_KEY
+
+Do NOT expose GEMINI_API_KEY to frontend code.
+
+Do NOT use:
+
+VITE_GEMINI_API_KEY
+
+Do NOT hard-code the API key.
+
+Do NOT send the Gemini API key to the browser.
+
+Do NOT log the API key.
+
+==================================================
+3. SERVER-SIDE GEMINI SERVICE
+==================================================
+
+Create or extend a server-side Gemini service using the existing project
+architecture.
+
+The service should:
+
+- Accept conversation context/messages.
+- Send the appropriate request to Gemini.
+- Return the generated text.
+- Handle Gemini API errors cleanly.
+- Avoid exposing provider-specific secrets.
+- Keep Gemini-specific logic out of React components.
+
+If a service layer already exists, extend it instead of creating a duplicate.
+
+Keep the implementation simple and understandable.
+
+==================================================
+4. MODEL SELECTION
+==================================================
+
+Use a current Gemini model that is appropriate for a free/low-cost API
+development project and compatible with the configured Google AI API.
+
+Before selecting the model, inspect the currently supported SDK/API usage
+and use a model that is actually available through the configured API.
+
+Do NOT invent a model name.
+
+Do NOT use an experimental model unless it is actually available and
+necessary.
+
+Keep the model name configurable through an environment variable if
+appropriate, for example:
+
+GEMINI_MODEL
+
+If a default is required, use a currently supported model confirmed by the
+installed SDK/API.
+
+==================================================
+5. CHAT API
+==================================================
+
+Modify the existing authenticated message endpoint rather than creating a
+duplicate endpoint.
+
+Continue using:
+
+POST /api/conversations/:id/messages
+
+The existing authentication and ownership checks MUST remain.
+
+The endpoint must:
+
+1. Authenticate the Firebase ID token.
+2. Obtain the verified user from req.user.
+3. Verify the conversation belongs to req.user.uid.
+4. Validate the incoming user message.
+5. Save the user message to Firestore.
+6. Retrieve the relevant conversation messages from Firestore.
+7. Send the conversation context to Gemini.
+8. Receive the Gemini response.
+9. Save the Gemini response as a model message in Firestore.
+10. Update conversation.updatedAt.
+11. Return the generated response to the frontend.
+
+Replace the Phase 2 response:
+
+Phase 2 Firebase Echo: [User Text]
+
+with the actual Gemini-generated response.
+
+Do NOT change the ownership model.
+
+Do NOT trust client-provided userId values.
+
+==================================================
+6. CONVERSATION CONTEXT
+==================================================
+
+For Phase 3, use the existing Firestore conversation history as the
+conversation context sent to Gemini.
+
+The context should contain the relevant previous messages from the current
+conversation.
+
+Maintain the correct roles when converting Firestore messages to the Gemini
+request format.
+
+Do NOT implement semantic memory yet.
+
+Do NOT retrieve information from Qdrant.
+
+Do NOT create embeddings.
+
+Do NOT extract memories.
+
+The only context source for Phase 3 should be the current conversation
+history already stored in Firestore.
+
+Keep the context implementation reasonably bounded so extremely long
+conversations do not result in uncontrolled API requests.
+
+If a practical message-history limit is required, implement a simple,
+documented limit without adding unnecessary complexity.
+
+==================================================
+7. GEMINI SYSTEM INSTRUCTIONS
+==================================================
+
+Use a small server-side system instruction appropriate for the application.
+
+The AI should:
+
+- Answer the user's question clearly.
+- Be helpful and conversational.
+- Avoid claiming to have access to information it does not have.
+- Use the supplied conversation history as context.
+
+Do NOT add artificial long-term memory behavior.
+
+Do NOT tell the model that it has persistent memory.
+
+Do NOT implement personalization from anything outside the current
+conversation history.
+
+That belongs to later phases.
+
+==================================================
+8. FRONTEND CHAT
+==================================================
+
+Preserve the existing Phase 1/2 chat UI.
+
+Modify only the data flow required to replace the Firebase Echo response
+with the real Gemini response.
+
+The frontend should:
+
+- Send the user's message using the existing authenticated API client.
+- Show an appropriate loading/thinking state while Gemini is generating.
+- Display the Gemini response.
+- Continue displaying previous persisted messages.
+- Continue loading conversations from Firestore-backed APIs.
+- Continue working after page refresh.
+- Continue using Firebase authentication.
+
+Do NOT redesign the chat interface.
+
+Do NOT introduce a new state-management library.
+
+Do NOT create a second chat implementation.
+
+==================================================
+9. ERROR HANDLING
+==================================================
+
+Handle Gemini failures gracefully.
+
+Potential cases include:
+
+- Missing GEMINI_API_KEY
+- Invalid Gemini API key
+- Gemini API failure
+- Rate limit
+- Temporary provider failure
+- Timeout
+- Malformed/unexpected Gemini response
+- Empty model response
+- Network failure
+
+The API should return an appropriate error response.
+
+Do NOT expose:
+
+- API keys
+- internal stack traces
+- sensitive configuration
+- Firebase Admin credentials
+- raw provider secrets
+
+The frontend should show a useful user-facing error rather than crashing.
+
+If the Gemini request fails after the user message has already been saved,
+do not silently pretend that an AI response was generated.
+
+Preserve the user message and return an appropriate error state.
+
+Do not create a fake fallback response that could be mistaken for Gemini.
+
+==================================================
+10. API EFFICIENCY
+==================================================
+
+Avoid unnecessary Gemini API calls.
+
+One user message should result in one Gemini generation request unless
+there is a clear technical reason otherwise.
+
+Do not call Gemini:
+
+- on page load
+- when loading conversations
+- when loading messages
+- when refreshing the page
+- when navigating between routes
+
+Only call Gemini when the user actually sends a new message.
+
+Do not send the same message multiple times because of React re-renders.
+
+==================================================
+11. SECURITY
+==================================================
+
+Preserve all Phase 2 security guarantees.
+
+The backend must continue to:
+
+- Verify Firebase ID tokens.
+- Use req.user.uid.
+- Verify conversation ownership.
+- Prevent cross-user conversation access.
+- Prevent client-supplied userId from overriding authenticated identity.
+
+Gemini API credentials must remain server-side.
+
+Never expose GEMINI_API_KEY in:
+
+- frontend source
+- Vite environment variables
+- browser requests
+- HTML
+- client bundles
+- logs
+
+==================================================
+12. PHASE 2 PRESERVATION
+==================================================
+
+Do NOT unnecessarily modify:
+
+- Firebase Authentication
+- Firebase Admin authentication middleware
+- Firestore security rules
+- Firestore data model
+- Wouter routing
+- React structure
+- TypeScript configuration
+- Vite configuration
+- Tailwind CSS
+- responsive UI
+- API health endpoint
+- protected routes
+- existing conversation ownership logic
+
+Only modify what is required for Phase 3.
+
+If a Phase 2 component must be changed for Gemini integration, make the
+smallest reasonable change.
+
+==================================================
+13. STRICTLY OUT OF SCOPE
+==================================================
+
+DO NOT implement:
+
+- Qdrant
+- Qdrant collections
+- embeddings
+- vector search
+- semantic search
+- memory extraction
+- memory storage
+- memory retrieval
+- memory updates
+- memory conflict handling
+- duplicate memory handling
+- agent architecture
+- tool calling
+- feedback adaptation
+- long-term user memory
+
+These belong to Phase 4 and later.
+
+==================================================
+14. VERIFICATION
+==================================================
+
+Do not report Phase 3 complete simply because the application compiles.
+
+Actually run and verify the implementation.
+
+--------------------------------------------------
+CONFIGURATION
+--------------------------------------------------
+
+Verify:
+
+- GEMINI_API_KEY is available server-side.
+- The API key is not exposed to the frontend.
+- The frontend production bundle does not contain the Gemini secret.
+- The server starts correctly with the Gemini configuration.
+
+Never print the actual secret value.
+
+--------------------------------------------------
+AUTHENTICATION
+--------------------------------------------------
+
+Verify:
+
+- Unauthenticated requests to the chat endpoint are rejected.
+- Authenticated requests work.
+- Firebase ownership checks remain active.
+
+--------------------------------------------------
+GEMINI
+--------------------------------------------------
+
+Verify:
+
+1. Send a real user message.
+2. Confirm the backend calls Gemini.
+3. Confirm a real Gemini response is returned.
+4. Confirm the response appears in the chat UI.
+5. Confirm the response is saved to Firestore.
+6. Refresh the page.
+7. Confirm the Gemini response persists.
+8. Send a follow-up question.
+9. Confirm previous conversation messages are supplied as context.
+10. Confirm the conversation continues naturally.
+
+--------------------------------------------------
+ERROR HANDLING
+--------------------------------------------------
+
+Where practical, verify:
+
+- Missing/invalid Gemini configuration.
+- Gemini API failure.
+- Invalid authentication.
+- Unauthorized conversation access.
+- Invalid message input.
+
+Do not claim a test passed unless it was actually executed.
+
+If a test cannot be performed in the available environment, explicitly state:
+
+"Not verified yet."
+
+==================================================
+15. BUILD VERIFICATION
+==================================================
+
+Before reporting completion, run:
+
+- Workspace TypeScript checks
+- Frontend typecheck
+- Backend typecheck if applicable
+- Production Vite build
+- Production API build if applicable
+- Relevant API/runtime checks
+
+Confirm that Phase 1 and Phase 2 functionality still builds successfully.
+
+==================================================
+16. CODE QUALITY
+==================================================
+
+Keep the implementation:
+
+- Minimal
+- Typed
+- Secure
+- Understandable
+- Consistent with the existing project structure
+
+Do not perform broad refactors.
+
+Do not add unnecessary abstractions.
+
+Do not modify unrelated components.
+
+Do not add unnecessary dependencies.
+
+Do not duplicate existing services or hooks.
+
+==================================================
+17. COMPLETION REPORT
+==================================================
+
+When Phase 3 is genuinely complete, report:
+
+1. What Gemini-related implementation already existed before you started.
+2. What you changed.
+3. What new files were created, if any.
+4. Gemini SDK/API integration.
+5. Gemini model used.
+6. Server-side API architecture.
+7. How conversation history is passed to Gemini.
+8. How Gemini responses are persisted.
+9. Frontend changes.
+10. Error handling.
+11. Security checks.
+12. Tests actually executed.
+13. Build/typecheck results.
+14. Runtime verification results.
+15. Any warnings.
+16. Any known limitations.
+17. Anything intentionally deferred to Phase 4+.
+
+Clearly distinguish:
+
+VERIFIED
+NOT VERIFIED
+KNOWN LIMITATION
+
+Do not claim functionality is complete if it was not actually tested.
+
+==================================================
+18. STRICT PHASE CHECKPOINT
+==================================================
+
+Once Phase 3 requirements are operational and verified:
+
+STOP.
+
+Do NOT begin Phase 4.
+
+Do NOT implement Qdrant.
+
+Do NOT implement embeddings.
+
+Do NOT implement memory extraction.
+
+Do NOT implement semantic retrieval.
+
+Do NOT implement agent/tool calling.
+
+Do NOT implement feedback adaptation.
+
+Wait for my explicit confirmation before continuing.
+
+==================================================
+FINAL PHASE 3 OBJECTIVE
+==================================================
+
+At the end of Phase 3, the application should have:
+
+Firebase Authentication
+        +
+Firestore persistence
+        +
+Authenticated backend
+        +
+Real Gemini generation
+        +
+Conversation history context
+        +
+Persisted Gemini responses
+        +
+Protected user-specific conversations
+
+while preserving all working Phase 1 and Phase 2 functionality.
+
+The Phase 2 Firebase Echo response should be completely replaced by the
+real Gemini response.
+
+Keep the implementation focused strictly on Gemini-powered conversation.
