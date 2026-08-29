@@ -12,12 +12,13 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 - Firebase web configuration uses the `VITE_FIREBASE_*` environment variables.
 - Firebase Admin uses `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`.
 - Server-side Gemini generation uses `GEMINI_API_KEY`; `GEMINI_MODEL` optionally overrides the supported low-cost default.
+- Server-side memory indexing uses `QDRANT_URL` and `QDRANT_API_KEY`; `GEMINI_EMBEDDING_MODEL` optionally overrides the embedding model.
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - Web: React, Vite, Tailwind CSS, Wouter, Firebase Authentication
-- API: Express 5, Firebase Admin, official Google Gemini SDK
+- API: Express 5, Firebase Admin, official Google Gemini SDK, official Qdrant client
 - Canonical application data store: Cloud Firestore
 - API contracts: OpenAPI, Orval-generated TypeScript and Zod clients
 - Validation: Zod (`zod/v4`)
@@ -38,6 +39,7 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 - Firebase Authentication runs in the browser; verified Firebase ID tokens protect API routes.
 - Firebase Admin credentials and Firestore writes for conversations/messages remain server-side.
 - Gemini API calls and credentials remain server-side; the browser receives only the generated response or a safe application error.
+- Memory extraction runs only after a successful new chat interaction; Firestore is the memory metadata source of truth and Qdrant stores vectors with Firebase UID ownership payloads.
 - Firestore root collections are `users`, `conversations`, and `messages`; ownership comes from the verified UID.
 - API contracts are defined in OpenAPI and generated into shared client/server packages.
 - The web application is rooted at `/` so the primary preview is immediately visible.
@@ -47,7 +49,8 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 - Phase 1 established the conversation workspace and memory dashboard surfaces.
 - Phase 2 adds Firebase email/password authentication plus user-owned Firestore conversations and messages.
 - Phase 3 replaces the deterministic Echo with context-aware Gemini responses generated and persisted by the API server.
-- Later phases will add Qdrant retrieval, persistent memory, tools, and application-level feedback adaptation.
+- Phase 4 adds conservative structured memory extraction, Google embeddings, Firestore memory metadata, and Qdrant vector storage.
+- Later phases will add Qdrant retrieval, memory conflict handling, tools, and application-level feedback adaptation.
 
 ## User preferences
 

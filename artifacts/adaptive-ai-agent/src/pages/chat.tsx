@@ -212,7 +212,7 @@ export function ChatPage() {
             <div className="memory-mini"><span>01</span><p>Long-term memory retrieval is intentionally deferred to a later phase.</p></div>
             <Link href="/memories" className="btn btn-link btn-small mt-2" data-testid="link-view-memories">Inspect memory preview <ArrowUp size={13} className="rotate-45" /></Link>
           </div>
-          <div className="rounded-xl border border-dashed border-[hsl(var(--border))] p-4 text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]"><FileText size={15} className="mb-2 text-[hsl(var(--primary))]" />Conversations and messages persist in Firestore. Memory extraction does not run in this phase.</div>
+          <div className="rounded-xl border border-dashed border-[hsl(var(--border))] p-4 text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]"><FileText size={15} className="mb-2 text-[hsl(var(--primary))]" />Memory-worthy details are stored after successful replies. Retrieval does not affect answers in this phase.</div>
         </aside>
       </main>
     </WorkspaceShell>

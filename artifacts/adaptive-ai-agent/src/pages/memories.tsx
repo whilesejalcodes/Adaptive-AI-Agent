@@ -45,13 +45,13 @@ export function MemoriesPage() {
 
   return (
     <WorkspaceShell>
-      <div className="topbar"><div className="connection opacity-0" aria-hidden="true"><span>placeholder</span></div><button className="icon-btn" type="button" onClick={() => setNotice('Memory settings will be available when storage is connected.')} aria-label="Memory settings" data-testid="button-memory-settings"><Archive size={17} /></button></div>
+      <div className="topbar"><div className="connection opacity-0" aria-hidden="true"><span>placeholder</span></div><button className="icon-btn" type="button" onClick={() => setNotice('Controls for stored memories arrive with retrieval in a later phase.')} aria-label="Memory settings" data-testid="button-memory-settings"><Archive size={17} /></button></div>
       <main className="workspace-content">
         <div className="memory-head">
           <div><div className="eyebrow text-[hsl(var(--primary))]">Your long-term context</div><h1 className="display">Memory, in the open.</h1><p>Small details that help future conversations meet you where you are. Review, refine, or remove them at any time.</p></div>
           <button className="btn btn-primary" type="button" onClick={() => { setShowCreate(true); setEditing(null); setDraft({ title: '', content: '' }); }} data-testid="button-add-memory"><Plus size={15} /> Add memory</button>
         </div>
-        <div className="notice"><Info size={15} /><span>This protected Phase 2 preview still uses local memory records. Memory extraction, retrieval, and Firestore persistence are intentionally deferred to Phase 3.</span></div>
+        <div className="notice"><Info size={15} /><span>Phase 4 now extracts and stores selected memories after successful chats. This dashboard remains a local preview; retrieval and stored-memory controls arrive in Phase 5.</span></div>
         {notice && <div className="mb-4 flex items-center gap-2 text-xs text-[hsl(var(--primary))]" role="status" data-testid="status-memory-notice"><Check size={14} /> {notice}<button className="icon-btn ml-auto" type="button" onClick={() => setNotice('')} aria-label="Dismiss memory notice" data-testid="button-dismiss-memory-notice"><X size={14} /></button></div>}
         {showCreate && (
           <form className="card mb-4 grid gap-4 p-5" onSubmit={createMemory} data-testid="form-create-memory">

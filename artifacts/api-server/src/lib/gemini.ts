@@ -9,6 +9,8 @@ const SYSTEM_INSTRUCTION =
   "Answer the user's question clearly, be practical when appropriate, and " +
   "do not claim access to information that is not present in the conversation.";
 
+let geminiClient: GoogleGenAI | undefined;
+
 export type GeminiConversationMessage = {
   role: "user" | "model";
   text: string;
@@ -34,6 +36,15 @@ export class GeminiGenerationError extends Error {
 
 function getModel(): string {
   return process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
+}
+
+export function getGeminiClient(): GoogleGenAI {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new GeminiGenerationError("configuration");
+  }
+  geminiClient ??= new GoogleGenAI({ apiKey });
+  return geminiClient;
 }
 
 function getContents(messages: GeminiConversationMessage[]) {
@@ -81,17 +92,12 @@ function classifyProviderError(error: unknown): GeminiFailureKind {
 export async function generateGeminiReply(
   messages: GeminiConversationMessage[],
 ): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-  if (!apiKey) {
-    throw new GeminiGenerationError("configuration");
-  }
-
   const contents = getContents(messages);
   if (contents.length === 0) {
     throw new GeminiGenerationError("provider");
   }
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = getGeminiClient();
   const abortController = new AbortController();
   const timeout = setTimeout(() => abortController.abort(), REQUEST_TIMEOUT_MS);
 

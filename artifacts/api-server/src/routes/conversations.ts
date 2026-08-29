@@ -17,6 +17,8 @@ import {
   GeminiGenerationError,
   type GeminiConversationMessage,
 } from "../lib/gemini";
+import { createMemoriesForInteraction } from "../lib/memory-storage";
+import { MemoryPipelineError } from "../lib/memory-types";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -297,6 +299,30 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
     batch.set(assistantMessageReference, assistantMessage);
     batch.update(conversation.ref, { updatedAt: assistantMessage.timestamp });
     await batch.commit();
+
+    try {
+      const memoryResult = await createMemoriesForInteraction({
+        userId,
+        conversationId: parsedParams.data.conversationId,
+        userMessageId: userMessage.id,
+        userText: userMessage.text,
+      });
+      if (memoryResult.failed > 0) {
+        req.log.warn(
+          {
+            extracted: memoryResult.extracted,
+            indexed: memoryResult.indexed,
+            failed: memoryResult.failed,
+          },
+          "Some extracted memories could not be indexed",
+        );
+      }
+    } catch (error) {
+      req.log.warn(
+        { kind: error instanceof MemoryPipelineError ? error.kind : "unknown" },
+        "Memory processing failed after successful chat response",
+      );
+    }
 
     const data = {
       userMessage: serializeMessage(userMessage),
