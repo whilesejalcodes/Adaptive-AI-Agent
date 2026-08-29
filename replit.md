@@ -40,6 +40,8 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 - Firebase Admin credentials and Firestore writes for conversations/messages remain server-side.
 - Gemini API calls and credentials remain server-side; the browser receives only the generated response or a safe application error.
 - Memory extraction runs only after a successful new chat interaction; Firestore is the memory metadata source of truth and Qdrant stores vectors with Firebase UID ownership payloads.
+- Chat retrieval creates one query embedding, filters Qdrant by the verified UID, validates indexed results against Firestore, and passes only bounded relevant notes to Gemini as untrusted context.
+- Authenticated memory APIs support owner-scoped create, list, read, update/re-index, and delete operations; vector deletion completes before metadata deletion.
 - Firestore root collections are `users`, `conversations`, and `messages`; ownership comes from the verified UID.
 - API contracts are defined in OpenAPI and generated into shared client/server packages.
 - The web application is rooted at `/` so the primary preview is immediately visible.
@@ -50,7 +52,8 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 - Phase 2 adds Firebase email/password authentication plus user-owned Firestore conversations and messages.
 - Phase 3 replaces the deterministic Echo with context-aware Gemini responses generated and persisted by the API server.
 - Phase 4 adds conservative structured memory extraction, Google embeddings, Firestore memory metadata, and Qdrant vector storage.
-- Later phases will add Qdrant retrieval, memory conflict handling, tools, and application-level feedback adaptation.
+- Phase 5 adds bounded Qdrant retrieval, failure isolation, duplicate-safe storage, owner-scoped memory management, and the live memory dashboard.
+- Later phases will add tools and application-level feedback adaptation.
 
 ## User preferences
 
@@ -59,6 +62,8 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 ## Gotchas
 
 - Run API code generation after every OpenAPI contract change before importing generated hooks.
+- Gemini retrieval-query embeddings must omit the document-only `title` field.
+- Qdrant UID filtering requires a `keyword` payload index on `userId`; ensure collection setup creates it for both new and existing collections.
 
 ## Pointers
 

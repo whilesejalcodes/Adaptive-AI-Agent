@@ -54,6 +54,21 @@ export type MemoryDocument = {
   indexingError?: MemoryFailureKind;
 };
 
+export const memoryUpdateSchema = z.object({
+  text: z.string().trim().min(3).max(500).optional(),
+  type: z.enum(MEMORY_TYPES).optional(),
+}).refine((value) => value.text !== undefined || value.type !== undefined, {
+  message: "At least one memory field is required.",
+});
+
+export const memoryInputSchema = z.object({
+  text: z.string().trim().min(3).max(500),
+  type: z.enum(MEMORY_TYPES),
+});
+
+export type MemoryUpdate = z.infer<typeof memoryUpdateSchema>;
+export type MemoryInput = z.infer<typeof memoryInputSchema>;
+
 export type MemoryFailureKind =
   | "configuration"
   | "extraction"

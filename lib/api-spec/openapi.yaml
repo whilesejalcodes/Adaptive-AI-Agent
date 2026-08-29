@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: conversations
     description: Authenticated conversation and message operations
+  - name: memories
+    description: Authenticated long-term memory operations
 paths:
   /healthz:
     get:
@@ -168,7 +170,166 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /memories:
+    get:
+      operationId: listMemories
+      tags: [memories]
+      summary: List the authenticated user's memories
+      responses:
+        "200":
+          description: Memories owned by the authenticated user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Memory"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createMemory
+      tags: [memories]
+      summary: Create a memory for the authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemoryInput"
+      responses:
+        "201":
+          description: Created and indexed memory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Memory"
+        "400":
+          description: Invalid memory input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Memory provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /memories/{memoryId}:
+    get:
+      operationId: getMemory
+      tags: [memories]
+      summary: Get an owned memory
+      parameters:
+        - $ref: "#/components/parameters/MemoryId"
+      responses:
+        "200":
+          description: Owned memory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Memory"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Memory not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateMemory
+      tags: [memories]
+      summary: Update and re-index an owned memory
+      parameters:
+        - $ref: "#/components/parameters/MemoryId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemoryUpdate"
+      responses:
+        "200":
+          description: Updated and indexed memory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Memory"
+        "400":
+          description: Invalid memory update
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Memory not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Memory provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteMemory
+      tags: [memories]
+      summary: Delete an owned memory and its vector
+      parameters:
+        - $ref: "#/components/parameters/MemoryId"
+      responses:
+        "204":
+          description: Memory deleted
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Memory not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Memory provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
+  parameters:
+    MemoryId:
+      name: memoryId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
   schemas:
     HealthStatus:
       type: object
@@ -257,4 +418,62 @@ components:
       required:
         - userMessage
         - assistantMessage
+    MemoryType:
+      type: string
+      enum: [preference, interest, goal, fact, instruction, context]
+    MemoryIndexStatus:
+      type: string
+      enum: [pending, indexed, failed]
+    Memory:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        type:
+          $ref: "#/components/schemas/MemoryType"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        sourceConversationId:
+          type: string
+        sourceMessageId:
+          type: string
+        vectorStatus:
+          $ref: "#/components/schemas/MemoryIndexStatus"
+      required:
+        - id
+        - text
+        - type
+        - createdAt
+        - updatedAt
+        - sourceConversationId
+        - sourceMessageId
+        - vectorStatus
+    MemoryInput:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 3
+          maxLength: 500
+        type:
+          $ref: "#/components/schemas/MemoryType"
+      required:
+        - text
+        - type
+    MemoryUpdate:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 3
+          maxLength: 500
+        type:
+          $ref: "#/components/schemas/MemoryType"
+      minProperties: 1
 

@@ -59,3 +59,53 @@ export interface MessageExchange {
   assistantMessage: Message;
 }
 
+export type MemoryType = typeof MemoryType[keyof typeof MemoryType];
+
+
+export const MemoryType = {
+  preference: 'preference',
+  interest: 'interest',
+  goal: 'goal',
+  fact: 'fact',
+  instruction: 'instruction',
+  context: 'context',
+} as const;
+
+export type MemoryIndexStatus = typeof MemoryIndexStatus[keyof typeof MemoryIndexStatus];
+
+
+export const MemoryIndexStatus = {
+  pending: 'pending',
+  indexed: 'indexed',
+  failed: 'failed',
+} as const;
+
+export interface Memory {
+  id: string;
+  text: string;
+  type: MemoryType;
+  createdAt: string;
+  updatedAt: string;
+  sourceConversationId: string;
+  sourceMessageId: string;
+  vectorStatus: MemoryIndexStatus;
+}
+
+export interface MemoryInput {
+  /**
+     * @minLength 3
+     * @maxLength 500
+     */
+  text: string;
+  type: MemoryType;
+}
+
+export interface MemoryUpdate {
+  /**
+     * @minLength 3
+     * @maxLength 500
+     */
+  text?: string;
+  type?: MemoryType;
+}
+

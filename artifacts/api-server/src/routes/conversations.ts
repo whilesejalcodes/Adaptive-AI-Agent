@@ -18,6 +18,11 @@ import {
   type GeminiConversationMessage,
 } from "../lib/gemini";
 import { createMemoriesForInteraction } from "../lib/memory-storage";
+import {
+  formatMemoryContext,
+  retrieveRelevantMemories,
+  isMemoryRetrievalError,
+} from "../lib/memory-retrieval";
 import { MemoryPipelineError } from "../lib/memory-types";
 import { requireAuth } from "../middlewares/auth";
 
@@ -285,7 +290,18 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
       .sort((left, right) => left.timestamp.toMillis() - right.timestamp.toMillis())
       .slice(-GEMINI_HISTORY_LIMIT)
       .map(({ role, text }) => ({ role, text }));
-    const assistantText = await generateGeminiReply(history);
+    let memoryContext: string | undefined;
+    try {
+      memoryContext = formatMemoryContext(
+        await retrieveRelevantMemories(userId, text),
+      );
+    } catch (error) {
+      req.log.warn(
+        { kind: isMemoryRetrievalError(error) ? error.kind : "unknown" },
+        "Memory retrieval failed; continuing without memory context",
+      );
+    }
+    const assistantText = await generateGeminiReply(history, memoryContext);
     const assistantMessage: MessageDocument = {
       id: assistantMessageReference.id,
       conversationId: parsedParams.data.conversationId,

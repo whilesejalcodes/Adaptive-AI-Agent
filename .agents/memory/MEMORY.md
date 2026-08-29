@@ -1,2 +1,3 @@
 - [Direct Gemini model availability](direct-gemini-model-availability.md) — verify defaults with this project’s live Google API catalog; stable-looking IDs may still return 404.
 - [Firestore message index availability](firestore-message-index-availability.md) — do not assume the declared conversation/timestamp composite index is deployed in development.
+- [Qdrant filter indexes](qdrant-filter-indexes.md) — ownership-filtered vector search requires a keyword payload index on each filter field.

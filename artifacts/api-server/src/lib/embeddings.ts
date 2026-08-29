@@ -12,9 +12,12 @@ export type GeneratedEmbedding = {
   dimension: number;
 };
 
+export type EmbeddingTaskType = "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY";
+
 export async function generateMemoryEmbedding(
   text: string,
   title: string,
+  taskType: EmbeddingTaskType = "RETRIEVAL_DOCUMENT",
 ): Promise<GeneratedEmbedding> {
   const model = process.env.GEMINI_EMBEDDING_MODEL?.trim() || DEFAULT_EMBEDDING_MODEL;
   const abortController = new AbortController();
@@ -26,8 +29,8 @@ export async function generateMemoryEmbedding(
       contents: text,
       config: {
         abortSignal: abortController.signal,
-        taskType: "RETRIEVAL_DOCUMENT",
-        title,
+        taskType,
+        ...(taskType === "RETRIEVAL_DOCUMENT" ? { title } : {}),
       },
     });
     const vector = response.embeddings?.[0]?.values;

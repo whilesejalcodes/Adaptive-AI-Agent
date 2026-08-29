@@ -109,3 +109,111 @@ export const SendConversationMessageResponse = zod.object({
 })
 
 
+/**
+ * @summary List the authenticated user's memories
+ */
+export const ListMemoriesResponseItem = zod.object({
+  "id": zod.string(),
+  "text": zod.string(),
+  "type": zod.enum(['preference', 'interest', 'goal', 'fact', 'instruction', 'context']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "sourceConversationId": zod.string(),
+  "sourceMessageId": zod.string(),
+  "vectorStatus": zod.enum(['pending', 'indexed', 'failed'])
+})
+export const ListMemoriesResponse = zod.array(ListMemoriesResponseItem)
+
+
+/**
+ * @summary Create a memory for the authenticated user
+ */
+export const createMemoryBodyTextMin = 3;
+export const createMemoryBodyTextMax = 500;
+
+
+
+export const CreateMemoryBody = zod.object({
+  "text": zod.string().min(createMemoryBodyTextMin).max(createMemoryBodyTextMax),
+  "type": zod.enum(['preference', 'interest', 'goal', 'fact', 'instruction', 'context'])
+})
+
+export const CreateMemoryResponse = zod.object({
+  "id": zod.string(),
+  "text": zod.string(),
+  "type": zod.enum(['preference', 'interest', 'goal', 'fact', 'instruction', 'context']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "sourceConversationId": zod.string(),
+  "sourceMessageId": zod.string(),
+  "vectorStatus": zod.enum(['pending', 'indexed', 'failed'])
+})
+
+
+/**
+ * @summary Get an owned memory
+ */
+
+
+
+export const GetMemoryParams = zod.object({
+  "memoryId": zod.coerce.string().min(1)
+})
+
+export const GetMemoryResponse = zod.object({
+  "id": zod.string(),
+  "text": zod.string(),
+  "type": zod.enum(['preference', 'interest', 'goal', 'fact', 'instruction', 'context']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "sourceConversationId": zod.string(),
+  "sourceMessageId": zod.string(),
+  "vectorStatus": zod.enum(['pending', 'indexed', 'failed'])
+})
+
+
+/**
+ * @summary Update and re-index an owned memory
+ */
+
+
+
+export const UpdateMemoryParams = zod.object({
+  "memoryId": zod.coerce.string().min(1)
+})
+
+export const updateMemoryBodyTextMin = 3;
+export const updateMemoryBodyTextMax = 500;
+
+
+
+export const UpdateMemoryBody = zod.object({
+  "text": zod.string().min(updateMemoryBodyTextMin).max(updateMemoryBodyTextMax).optional(),
+  "type": zod.enum(['preference', 'interest', 'goal', 'fact', 'instruction', 'context']).optional()
+})
+
+export const UpdateMemoryResponse = zod.object({
+  "id": zod.string(),
+  "text": zod.string(),
+  "type": zod.enum(['preference', 'interest', 'goal', 'fact', 'instruction', 'context']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "sourceConversationId": zod.string(),
+  "sourceMessageId": zod.string(),
+  "vectorStatus": zod.enum(['pending', 'indexed', 'failed'])
+})
+
+
+/**
+ * @summary Delete an owned memory and its vector
+ */
+
+
+
+export const DeleteMemoryParams = zod.object({
+  "memoryId": zod.coerce.string().min(1)
+})
+
+export const DeleteMemoryResponse = zod.void()
+
+
