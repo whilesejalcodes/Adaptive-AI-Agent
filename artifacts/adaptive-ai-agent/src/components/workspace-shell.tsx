@@ -1,6 +1,7 @@
-import { Brain, CircleUserRound, Compass, MessageSquare, Plus, Sparkles } from 'lucide-react';
+import { Brain, Compass, LogOut, MessageSquare, Plus, Sparkles } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { getHealthCheckQueryKey, useHealthCheck } from '@workspace/api-client-react';
+import { useAuth } from '@/components/auth-provider';
 
 function Brand() {
   return (
@@ -49,7 +50,16 @@ export function MobileNavigation() {
 }
 
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { user, logout } = useAuth();
+  const displayName = user?.displayName || user?.email || 'Your workspace';
+  const initials = displayName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+
+  async function handleLogout() {
+    await logout();
+    setLocation('/login');
+  }
+
   return (
     <div className="page-shell app-noise">
       <aside className="side-rail" aria-label="Workspace navigation">
@@ -76,12 +86,12 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         <div className="mt-auto">
           <ConnectionStatus />
           <div className="mt-4 flex items-center gap-2 border-t border-[hsl(var(--sidebar-border))] pt-4">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-[hsl(var(--sidebar-primary)/.18)] text-[11px] font-semibold text-[hsl(var(--sidebar-primary))]">SC</span>
+             <span className="grid h-8 w-8 place-items-center rounded-lg bg-[hsl(var(--sidebar-primary)/.18)] text-[11px] font-semibold text-[hsl(var(--sidebar-primary))]">{initials}</span>
             <div className="min-w-0">
-              <div className="truncate text-xs">Sam Carter</div>
+               <div className="truncate text-xs">{displayName}</div>
               <div className="font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.42)]">personal space</div>
             </div>
-            <CircleUserRound size={15} className="ml-auto opacity-40" />
+             <button className="icon-btn ml-auto opacity-60 hover:opacity-100" type="button" onClick={handleLogout} aria-label="Sign out" data-testid="button-logout"><LogOut size={15} /></button>
           </div>
         </div>
       </aside>

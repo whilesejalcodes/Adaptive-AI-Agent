@@ -6,4 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './conversation';
+export * from './conversationInput';
+export * from './errorResponse';
 export * from './healthStatus';
+export * from './message';
+export * from './messageExchange';
+export * from './messageInput';
+export * from './messageRole';

@@ -17,3 +17,95 @@ export const HealthCheckResponse = zod.object({
 })
 
 
+/**
+ * @summary List the authenticated user's conversations
+ */
+export const ListConversationsResponseItem = zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "title": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListConversationsResponse = zod.array(ListConversationsResponseItem)
+
+
+/**
+ * @summary Create a conversation for the authenticated user
+ */
+export const createConversationBodyTitleMax = 120;
+
+
+
+export const CreateConversationBody = zod.object({
+  "title": zod.string().min(1).max(createConversationBodyTitleMax)
+})
+
+export const CreateConversationResponse = zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "title": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List messages for an owned conversation
+ */
+
+
+
+export const ListConversationMessagesParams = zod.object({
+  "conversationId": zod.coerce.string().min(1)
+})
+
+export const ListConversationMessagesResponseItem = zod.object({
+  "id": zod.string(),
+  "conversationId": zod.string(),
+  "userId": zod.string(),
+  "role": zod.enum(['user', 'model']),
+  "text": zod.string(),
+  "timestamp": zod.coerce.date()
+})
+export const ListConversationMessagesResponse = zod.array(ListConversationMessagesResponseItem)
+
+
+/**
+ * @summary Store a user message and Firebase Echo response
+ */
+
+
+
+export const SendConversationMessageParams = zod.object({
+  "conversationId": zod.coerce.string().min(1)
+})
+
+export const sendConversationMessageBodyTextMax = 4000;
+
+
+
+export const SendConversationMessageBody = zod.object({
+  "text": zod.string().min(1).max(sendConversationMessageBodyTextMax)
+})
+
+export const SendConversationMessageResponse = zod.object({
+  "userMessage": zod.object({
+  "id": zod.string(),
+  "conversationId": zod.string(),
+  "userId": zod.string(),
+  "role": zod.enum(['user', 'model']),
+  "text": zod.string(),
+  "timestamp": zod.coerce.date()
+}),
+  "assistantMessage": zod.object({
+  "id": zod.string(),
+  "conversationId": zod.string(),
+  "userId": zod.string(),
+  "role": zod.enum(['user', 'model']),
+  "text": zod.string(),
+  "timestamp": zod.coerce.date()
+})
+})
+
+

@@ -1,18 +1,42 @@
-import { ArrowRight, Eye, EyeOff, LockKeyhole, Waves } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, LockKeyhole, Waves, LoaderCircle } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import { useAuth } from '@/components/auth-provider';
 
 type AuthMode = 'login' | 'signup';
 
 export function AuthPage({ mode }: { mode: AuthMode }) {
   const [, setLocation] = useLocation();
+  const { user, loading, login, signup } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const isSignup = mode === 'signup';
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    if (!loading && user) setLocation('/chat');
+  }, [loading, setLocation, user]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitted(true);
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get('name') ?? '');
+    const email = String(form.get('email') ?? '');
+    const password = String(form.get('password') ?? '');
+    setError('');
+    setSubmitting(true);
+    try {
+      if (isSignup) {
+        await signup(name, email, password);
+      } else {
+        await login(email, password);
+      }
+      setLocation('/chat');
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : 'Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -34,10 +58,10 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
           <div className="eyebrow muted">{isSignup ? 'Begin here' : 'Welcome back'}</div>
           <h2>{isSignup ? 'Make room for better thinking.' : 'Pick up where you left off.'}</h2>
           <p className="subcopy">{isSignup ? 'Create a personal workspace for conversations that compound.' : 'Your workspace is ready when you are.'}</p>
-          {submitted && (
-            <div className="notice" role="status" data-testid="status-auth-demo">
+           {error && (
+             <div className="notice border-[hsl(var(--destructive)/.35)] text-[hsl(var(--destructive))]" role="alert" data-testid="status-auth-error">
               <LockKeyhole size={15} />
-              <span>This is a visual preview. Account actions will connect in a later phase.</span>
+               <span>{error}</span>
             </div>
           )}
           <form onSubmit={handleSubmit}>
@@ -60,9 +84,8 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
                 </button>
               </div>
             </div>
-            <button className="btn btn-primary mt-1 w-full" type="submit" data-testid={`button-submit-${mode}`}>
-              <span>{isSignup ? 'Create workspace' : 'Sign in'}</span>
-              <ArrowRight size={15} />
+             <button className="btn btn-primary mt-1 w-full" type="submit" disabled={submitting} data-testid={`button-submit-${mode}`}>
+               {submitting ? <LoaderCircle size={15} className="animate-spin" /> : <><span>{isSignup ? 'Create workspace' : 'Sign in'}</span><ArrowRight size={15} /></>}
             </button>
           </form>
           <div className="auth-foot">

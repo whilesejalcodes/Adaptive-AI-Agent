@@ -4,18 +4,20 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server on the workflow-provided `PORT`
 - `pnpm --filter @workspace/adaptive-ai-agent run dev` — run the web app
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- Required environment variables will be added as external services are introduced.
+- Firebase web configuration uses the `VITE_FIREBASE_*` environment variables.
+- Firebase Admin uses `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`.
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- Web: React, Vite, Tailwind CSS, Wouter
-- API: Express 5
+- Web: React, Vite, Tailwind CSS, Wouter, Firebase Authentication
+- API: Express 5, Firebase Admin
+- Canonical Phase 2 data store: Cloud Firestore
 - API contracts: OpenAPI, Orval-generated TypeScript and Zod clients
 - Validation: Zod (`zod/v4`)
 - API codegen: Orval (from OpenAPI spec)
@@ -32,14 +34,18 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 
 ## Architecture decisions
 
-- The initial product shell is built before external AI and authentication integrations.
+- Firebase Authentication runs in the browser; verified Firebase ID tokens protect API routes.
+- Firebase Admin credentials and Firestore writes for conversations/messages remain server-side.
+- Firestore root collections are `users`, `conversations`, and `messages`; ownership comes from the verified UID.
 - API contracts are defined in OpenAPI and generated into shared client/server packages.
 - The web application is rooted at `/` so the primary preview is immediately visible.
 
 ## Product
 
-- Phase 1 establishes the conversation workspace and memory dashboard surfaces.
-- Later phases will add Firebase Authentication, Firestore persistence, Gemini responses, Qdrant retrieval, and application-level feedback adaptation.
+- Phase 1 established the conversation workspace and memory dashboard surfaces.
+- Phase 2 adds Firebase email/password authentication plus user-owned Firestore conversations and messages.
+- The Phase 2 assistant response is intentionally deterministic: `Phase 2 Firebase Echo: [User Text]`.
+- Later phases will add Gemini responses, Qdrant retrieval, persistent memory, tools, and application-level feedback adaptation.
 
 ## User preferences
 

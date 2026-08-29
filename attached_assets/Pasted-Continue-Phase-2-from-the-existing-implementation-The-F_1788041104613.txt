@@ -1,0 +1,753 @@
+Continue Phase 2 from the existing implementation.
+
+The Firebase configuration secrets have already been provided securely.
+
+IMPORTANT:
+
+First inspect the EXISTING project files and implementation. I do not know
+which files, components, routes, hooks, services, or Firebase setup you have
+already created, so determine that from the actual codebase.
+
+Do NOT ask me to identify existing files.
+
+Do NOT recreate files or functionality that already exists.
+
+Reuse or modify the existing implementation where appropriate.
+
+Do NOT restart Phase 2 from scratch.
+
+Do NOT begin Phase 3.
+
+Work incrementally and verify major changes before moving on.
+
+==================================================
+PHASE 2 GOAL
+==================================================
+
+Complete Firebase Authentication + Firestore persistence while preserving
+the working Phase 1 application.
+
+The final Phase 2 application should provide:
+
+- Real Firebase Email/Password Authentication
+- Persistent authentication state
+- Protected application routes
+- Server-side Firebase token verification
+- Firestore persistence
+- Persistent conversations
+- Persistent messages
+- User-specific data isolation
+- Secure ownership enforcement
+
+The AI response should remain a deterministic Firebase Echo placeholder.
+
+Gemini is NOT part of this phase.
+
+==================================================
+0. DEPENDENCY AND EXISTING PROJECT RULES
+==================================================
+
+Before changing dependencies:
+
+- Inspect package.json.
+- Inspect the currently installed package versions.
+- Use APIs compatible with the installed versions.
+- Do not upgrade unrelated dependencies.
+- Only add Firebase packages that are actually required for Phase 2.
+- Do not introduce unnecessary libraries.
+
+Keep the Phase 2 implementation minimal, understandable, and appropriate
+for an entry-level full-stack/SDE portfolio project.
+
+Do not introduce repository abstractions, state-management libraries,
+dependency upgrades, or architectural refactors unless they are genuinely
+necessary for Phase 2.
+
+Do not make broad refactors.
+
+If an unrelated existing issue is discovered, do not rewrite unrelated
+parts of the application to fix it. Report it separately.
+
+==================================================
+1. SERVER-SIDE AUTHENTICATION
+==================================================
+
+Implement server-side authentication using the Firebase Admin SDK.
+
+Requirements:
+
+- Verify Firebase ID tokens from the Authorization header.
+- Use:
+
+  admin.auth().verifyIdToken()
+
+- Extract the verified Firebase UID.
+- Attach the verified user information to the request as:
+
+  req.user
+
+- Use the verified Firebase UID as the source of truth for ownership.
+- Never trust a client-provided userId for authorization.
+- All user-owned Firestore operations must be scoped to:
+
+  req.user.uid
+
+- Keep Firebase Admin credentials strictly server-side.
+- Never expose Firebase Admin credentials to frontend code.
+- Never log private credentials or tokens.
+
+If authentication middleware already exists:
+
+- Inspect it.
+- Reuse/extend/fix it.
+- Do NOT create a duplicate authentication system.
+
+Use the existing server architecture where appropriate.
+
+If TypeScript requires request type augmentation for req.user, implement it
+cleanly using the existing TypeScript structure.
+
+==================================================
+2. FIREBASE CLIENT AUTHENTICATION
+==================================================
+
+Use the Firebase client SDK for frontend authentication.
+
+Implement or extend the existing authentication hook/context.
+
+Use:
+
+onAuthStateChanged
+
+The authentication layer should expose:
+
+- user
+- loading
+- login
+- signup
+- logout
+
+Use Firebase Email/Password authentication.
+
+Support:
+
+- Signup
+- Login
+- Logout
+- Persistent auth state
+- Auth loading state
+- Invalid credentials
+- Existing account errors
+- Invalid signup input
+- Firebase/network errors
+
+Do not enable or implement Google authentication in this phase.
+
+If an equivalent auth hook/context already exists, modify/reuse it instead
+of creating a duplicate.
+
+==================================================
+3. FIRESTORE USER RECORD
+==================================================
+
+When a user successfully signs up, create or ensure the corresponding
+Firestore user document exists:
+
+/users/{uid}
+
+Fields:
+
+- email: string
+- createdAt: timestamp
+
+Use the authenticated Firebase UID as the document ID.
+
+Do not allow the client to choose an arbitrary UID for another user.
+
+Avoid unnecessarily recreating an existing user document on every login.
+
+==================================================
+4. FIRESTORE DATA MODEL
+==================================================
+
+Implement the following logical collections.
+
+--------------------------------------------------
+/users/{uid}
+--------------------------------------------------
+
+Fields:
+
+- email: string
+- createdAt: timestamp
+
+
+--------------------------------------------------
+/conversations/{conversationId}
+--------------------------------------------------
+
+Fields:
+
+- id: string
+- userId: string
+- title: string
+- createdAt: timestamp
+- updatedAt: timestamp
+
+
+--------------------------------------------------
+/messages/{messageId}
+--------------------------------------------------
+
+Fields:
+
+- id: string
+- conversationId: string
+- userId: string
+- role: "user" | "model"
+- text: string
+- timestamp: timestamp
+
+Use appropriate Firestore Timestamp/server timestamp behavior.
+
+Use existing shared TypeScript types where appropriate.
+
+Do not duplicate types unnecessarily.
+
+==================================================
+5. FIRESTORE QUERYING
+==================================================
+
+Conversations must be queried using the authenticated user's UID.
+
+For example, conceptually:
+
+userId == req.user.uid
+
+Conversations should be ordered by updatedAt where appropriate.
+
+Messages should be queried using conversationId.
+
+Before returning messages, verify that the requested conversation belongs
+to req.user.uid.
+
+If Firestore requires a composite index for a query:
+
+- Identify the required index.
+- Configure/document it appropriately.
+- Do NOT weaken the intended query simply to avoid creating an index.
+
+Do not create unnecessary indexes.
+
+==================================================
+6. API ENDPOINTS
+==================================================
+
+Use the existing server/router architecture.
+
+Implement the following authenticated API behavior.
+
+All protected endpoints must require the Firebase Auth Middleware.
+
+--------------------------------------------------
+GET /api/conversations
+--------------------------------------------------
+
+Return only conversations belonging to:
+
+req.user.uid
+
+Never accept a userId from the client as the ownership authority.
+
+
+--------------------------------------------------
+POST /api/conversations
+--------------------------------------------------
+
+Create a new conversation.
+
+The conversation must belong to:
+
+req.user.uid
+
+Generate an appropriate conversation ID.
+
+Store:
+
+- id
+- userId
+- title
+- createdAt
+- updatedAt
+
+
+--------------------------------------------------
+GET /api/conversations/:id/messages
+--------------------------------------------------
+
+First:
+
+1. Authenticate the request.
+2. Look up the conversation.
+3. Verify that conversation.userId === req.user.uid.
+4. Only then retrieve its messages.
+
+If the conversation does not belong to the authenticated user, do not return
+its messages.
+
+Return an appropriate unauthorized/not-found response without leaking
+another user's data.
+
+
+--------------------------------------------------
+POST /api/conversations/:id/messages
+--------------------------------------------------
+
+First authenticate the request.
+
+Then:
+
+1. Verify the conversation exists.
+2. Verify the conversation belongs to req.user.uid.
+3. Validate the incoming user text.
+4. Save the user message.
+5. Generate the deterministic placeholder response:
+
+   Phase 2 Firebase Echo: [User Text]
+
+6. Save the placeholder response as a message with:
+
+   role: "model"
+
+7. Update the conversation's updatedAt timestamp.
+8. Return the appropriate response to the frontend.
+
+Example:
+
+User sends:
+
+Hello
+
+Store:
+
+role: "user"
+text: "Hello"
+
+Then generate:
+
+Phase 2 Firebase Echo: Hello
+
+Store:
+
+role: "model"
+text: "Phase 2 Firebase Echo: Hello"
+
+DO NOT call Gemini.
+
+DO NOT implement any AI model integration.
+
+==================================================
+7. API AUTHORIZATION HEADER
+==================================================
+
+Authenticated frontend API requests must dynamically obtain the Firebase
+ID token and send:
+
+Authorization: Bearer <token>
+
+The token must come from the currently authenticated Firebase user.
+
+Do not hard-code tokens.
+
+Do not store tokens in source code.
+
+Do not trust a client-provided userId.
+
+Use the existing typed API client architecture where possible.
+
+If the existing API client needs to be extended, modify it rather than
+creating an unnecessary second API client.
+
+==================================================
+8. PROTECTED ROUTES
+==================================================
+
+Protect:
+
+- /chat
+- /memories
+
+Unauthenticated users should be redirected to:
+
+/login
+
+The application must correctly handle the Firebase authentication loading
+state so users are not incorrectly redirected while Firebase is still
+determining the current authentication state.
+
+Preserve:
+
+- /
+- /login
+- /signup
+
+Preserve the existing Phase 1 responsive UI and navigation.
+
+If a ProtectedRoute component already exists, reuse or modify it.
+
+Do not create duplicate route-protection logic.
+
+==================================================
+9. CHAT FRONTEND INTEGRATION
+==================================================
+
+Replace the Phase 1 local/demo conversation persistence with the new
+authenticated API where required.
+
+The chat UI should now:
+
+- Load the authenticated user's conversations.
+- Create conversations through the API.
+- Load messages from Firestore through the API.
+- Send messages through the API.
+- Display the deterministic Firebase Echo response.
+- Persist messages across refreshes.
+
+The existing visual design should be preserved.
+
+Do not redesign the application unnecessarily.
+
+The response should NOT come from Gemini yet.
+
+==================================================
+10. MEMORY PAGE
+==================================================
+
+Do NOT implement real long-term memory in this phase.
+
+The /memories page may continue using Phase 1 demo/local state.
+
+However:
+
+- It must be protected by authentication.
+- It must not expose another user's data.
+- Do not connect it to Qdrant.
+- Do not implement memory extraction.
+- Do not implement embeddings.
+
+Real memory functionality belongs to Phases 4–5.
+
+==================================================
+11. FIRESTORE SECURITY RULES
+==================================================
+
+Implement appropriate Firestore security rules.
+
+Rules must prevent one authenticated user from accessing another user's:
+
+- user document
+- conversations
+- messages
+
+Ownership should be based on Firebase Authentication identity.
+
+The intended behavior is conceptually:
+
+request.auth.uid == resource.data.userId
+
+where appropriate for the data model.
+
+Ensure users cannot manipulate a userId field to gain access to another
+user's data.
+
+Do not rely only on frontend route protection.
+
+Do not consider security complete merely because rules exist.
+
+Test the ownership behavior.
+
+==================================================
+12. SECURITY PRINCIPLE
+==================================================
+
+The complete ownership flow should be:
+
+Firebase Authentication
+        ↓
+Firebase ID token
+        ↓
+Frontend Authorization header
+        ↓
+Server token verification
+        ↓
+req.user.uid
+        ↓
+Firestore ownership query
+        ↓
+Only authenticated user's data
+
+Never use:
+
+frontend userId
+        ↓
+backend trusts userId
+        ↓
+Firestore
+
+The frontend is NOT the authority for identity.
+
+==================================================
+13. ERROR HANDLING
+==================================================
+
+Handle common errors gracefully:
+
+Authentication:
+
+- Invalid credentials
+- Existing account
+- Weak/invalid signup
+- Network failure
+- Expired/invalid token
+
+Firestore/API:
+
+- Permission denied
+- Conversation not found
+- Unauthorized conversation access
+- Invalid message
+- Firestore failure
+- Network failure
+
+Return appropriate HTTP status codes.
+
+Do not expose sensitive internal details.
+
+Do not log secrets, private keys, or authentication tokens.
+
+Preserve useful debugging information in development where appropriate.
+
+==================================================
+14. PHASE 1 PRESERVATION
+==================================================
+
+Do not unnecessarily modify:
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- Wouter routing
+- Existing responsive layouts
+- Existing shared structure
+- Existing API health endpoint
+- Existing working UI components
+
+Only modify what is required for Phase 2.
+
+Do not perform broad refactoring.
+
+Do not replace working Phase 1 components merely because a different
+implementation style is possible.
+
+==================================================
+15. STRICTLY OUT OF SCOPE
+==================================================
+
+DO NOT implement:
+
+- Gemini
+- Gemini API
+- Gemini chat generation
+- embeddings
+- Qdrant
+- vector search
+- memory extraction
+- memory retrieval
+- memory updates
+- memory conflict resolution
+- duplicate memory handling
+- agent architecture
+- tool calling
+- feedback adaptation
+- streaming AI responses
+
+These belong to later phases.
+
+==================================================
+16. REQUIRED VERIFICATION
+==================================================
+
+Do not report Phase 2 complete simply because the code compiles.
+
+Actually run and verify as many of the following as the environment allows.
+
+--------------------------------------------------
+AUTHENTICATION
+--------------------------------------------------
+
+1. Create a new user.
+2. Verify signup succeeds.
+3. Verify a /users/{uid} document is created.
+4. Log out.
+5. Log back in.
+6. Refresh while authenticated.
+7. Verify authentication state persists.
+8. Log out.
+9. Verify /chat is protected.
+10. Verify /memories is protected.
+11. Verify invalid login credentials are handled.
+12. Verify authentication errors are handled.
+
+--------------------------------------------------
+FIRESTORE
+--------------------------------------------------
+
+13. Create a conversation.
+14. Verify it appears in Firestore.
+15. Send a user message.
+16. Verify the user message is stored.
+17. Verify the Firebase Echo model message is stored.
+18. Refresh the page.
+19. Verify the conversation persists.
+20. Verify messages persist.
+21. Create another conversation.
+22. Verify conversations remain correctly separated.
+
+--------------------------------------------------
+OWNERSHIP
+--------------------------------------------------
+
+23. Create User A.
+24. Create User A's conversation.
+25. Create User A's messages.
+26. Log out.
+27. Authenticate as User B.
+28. Verify User B cannot see User A's conversations.
+29. Verify User B cannot retrieve User A's messages.
+30. Attempt to access User A's conversation by ID.
+31. Verify access is denied.
+32. Attempt to manipulate a userId in a request.
+33. Verify the server still uses req.user.uid and rejects unauthorized access.
+
+--------------------------------------------------
+BUILD
+--------------------------------------------------
+
+Run:
+
+- Workspace typecheck
+- Frontend typecheck
+- Backend typecheck if applicable
+- Production Vite build
+- Relevant API/runtime checks
+
+If tests cannot be fully automated in the current environment, perform the
+available manual/runtime verification and clearly state what was and was
+not verified.
+
+Do not claim a test passed unless it was actually executed.
+
+If something cannot be verified, explicitly state:
+
+"Not verified yet."
+
+==================================================
+17. ACTUAL CODEBASE INSPECTION
+==================================================
+
+Before implementation, determine:
+
+- Which Firebase packages are already installed.
+- Which Firebase configuration is already implemented.
+- Which authentication files already exist.
+- Which server files already exist.
+- Which API routes already exist.
+- Which API client already exists.
+- Which Phase 1 local/demo state needs to be replaced.
+- Which shared types already exist.
+
+Do not recreate existing functionality.
+
+At the beginning of your work, briefly summarize the current relevant
+implementation and what remains to be completed.
+
+Then implement the missing pieces.
+
+==================================================
+18. COMPLETION REPORT
+==================================================
+
+When Phase 2 is genuinely complete, report:
+
+1. What was already implemented when you started.
+2. What you changed.
+3. What new files were created, if any.
+4. Firebase Authentication implementation.
+5. Firestore schema.
+6. Server authentication implementation.
+7. API endpoints implemented.
+8. Frontend authentication implementation.
+9. Protected routes.
+10. Ownership/security implementation.
+11. Tests actually executed.
+12. Build/typecheck results.
+13. Runtime verification results.
+14. Any warnings.
+15. Any known limitations.
+16. Anything intentionally deferred to Phase 3+.
+
+Clearly distinguish:
+
+- VERIFIED
+- NOT VERIFIED
+- KNOWN LIMITATION
+
+Do not claim functionality is complete if it was not actually tested.
+
+==================================================
+19. STRICT PHASE CHECKPOINT
+==================================================
+
+Once Phase 2 requirements are operational and verified:
+
+STOP.
+
+Do NOT begin Phase 3.
+
+Do NOT implement Gemini.
+
+Do NOT implement Qdrant.
+
+Do NOT implement embeddings.
+
+Do NOT implement memory.
+
+Do NOT implement agent/tool logic.
+
+Wait for my explicit confirmation before continuing to Phase 3.
+
+==================================================
+FINAL OBJECTIVE
+==================================================
+
+At the end of Phase 2, the application should have:
+
+Real Firebase Authentication
+        +
+Real Firestore persistence
+        +
+Authenticated backend API
+        +
+Protected routes
+        +
+User-specific conversations/messages
+        +
+Secure ownership enforcement
+        +
+Phase 2 Firebase Echo response
+
+while preserving the working Phase 1 application.
+
+Keep the implementation minimal, secure, understandable, and compatible
+with the existing codebase.

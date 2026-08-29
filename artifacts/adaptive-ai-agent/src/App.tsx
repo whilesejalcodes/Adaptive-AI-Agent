@@ -8,6 +8,7 @@ import { AuthPage } from '@/pages/auth';
 import { ChatPage } from '@/pages/chat';
 import { HomePage } from '@/pages/home';
 import { MemoriesPage } from '@/pages/memories';
+import { ProtectedRoute } from '@/components/protected-route';
 import {
   Route,
   Switch,
@@ -30,8 +31,12 @@ function Router() {
         <Route path="/signup">
           <AuthPage mode="signup" />
         </Route>
-        <Route path="/chat" component={ChatPage} />
-        <Route path="/memories" component={MemoriesPage} />
+        <Route path="/chat">
+          <ProtectedRoute><ChatPage /></ProtectedRoute>
+        </Route>
+        <Route path="/memories">
+          <ProtectedRoute><MemoriesPage /></ProtectedRoute>
+        </Route>
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>

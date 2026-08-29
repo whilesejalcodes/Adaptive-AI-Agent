@@ -9,3 +9,53 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface ErrorResponse {
+  error: string;
+}
+
+export interface Conversation {
+  id: string;
+  userId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversationInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
+}
+
+export type MessageRole = typeof MessageRole[keyof typeof MessageRole];
+
+
+export const MessageRole = {
+  user: 'user',
+  model: 'model',
+} as const;
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  userId: string;
+  role: MessageRole;
+  text: string;
+  timestamp: string;
+}
+
+export interface MessageInput {
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  text: string;
+}
+
+export interface MessageExchange {
+  userMessage: Message;
+  assistantMessage: Message;
+}
+
