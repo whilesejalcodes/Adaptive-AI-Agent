@@ -4,3 +4,4 @@
 - [Explicit memory tool writes](explicit-memory-tool-writes.md) — skip automatic extraction after a successful explicit memory tool write to avoid semantically duplicated records.
 - [Memory recall retrieval](memory-recall-retrieval.md) — explicit recall uses one topic-focused retrieval and a first-turn search reuse path; ordinary chat should not auto-search.
 - [API runtime validation](api-runtime-validation.md) — validate TypeScript server modules through the package build when direct Node execution cannot resolve extensionless imports.
+- [Artifact package installation](artifact-package-installation.md) — target frontend dependencies with the artifact filter when the package helper defaults to the workspace root.

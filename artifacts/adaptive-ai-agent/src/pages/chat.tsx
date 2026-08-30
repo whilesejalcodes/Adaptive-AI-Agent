@@ -1,6 +1,8 @@
 import { ArrowUp, Check, Clock3, FileText, History, MoreHorizontal, Pencil, Plus, Sparkles, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { Children, FormEvent, isValidElement, useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
+import rehypeKatex from 'rehype-katex';
+import remarkMath from 'remark-math';
 import { Link } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -20,6 +22,7 @@ import {
 } from '@workspace/api-client-react';
 import { WorkspaceShell } from '@/components/workspace-shell';
 import { useAuth } from '@/components/auth-provider';
+import 'katex/dist/katex.min.css';
 
 function messageTime(timestamp: string): string {
   return new Date(timestamp).toLocaleTimeString([], {
@@ -65,6 +68,8 @@ function MarkdownResponse({ text }: { text: string }) {
   return (
     <div className="message-markdown">
       <ReactMarkdown
+        remarkPlugins={[remarkMath]}
+        rehypePlugins={[rehypeKatex]}
         components={{
           pre: MarkdownPre,
           code: ({ className, children, ...props }) => {
