@@ -10,6 +10,7 @@ import { queryMemoryVectors, type RetrievedMemoryPoint } from "./qdrant";
 const DEFAULT_TOP_K = 3;
 const MAX_TOP_K = 5;
 const DEFAULT_SCORE_THRESHOLD = 0.65;
+export const MEMORY_RECALL_SCORE_THRESHOLD = 0.45;
 const MAX_CONTEXT_LENGTH = 1_800;
 
 export type RetrievedMemory = {

@@ -40,7 +40,7 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 - Firebase Admin credentials and Firestore writes for conversations/messages remain server-side.
 - Gemini API calls and credentials remain server-side; the browser receives only the generated response or a safe application error.
 - Memory extraction runs only after a successful new chat interaction; Firestore is the memory metadata source of truth and Qdrant stores vectors with Firebase UID ownership payloads.
-- Chat retrieval creates one query embedding, filters Qdrant by the verified UID, validates indexed results against Firestore, and passes only bounded relevant notes to Gemini as untrusted context.
+- Memory-recall chat requests use one topic-focused query embedding, filter Qdrant by the verified UID, validate indexed results against Firestore, and pass only bounded relevant notes to Gemini as untrusted context; ordinary chat does not incur automatic retrieval.
 - Authenticated memory APIs support owner-scoped create, list, read, update/re-index, and delete operations; vector deletion completes before metadata deletion.
 - Phase 6 chat generation runs through a bounded server-side orchestrator with a centralized typed registry for native Gemini function calls. Its memory tools reuse the Phase 5 retrieval and storage/update services, and ownership always comes from the verified Firebase UID.
 - Firestore root collections are `users`, `conversations`, and `messages`; ownership comes from the verified UID.
@@ -54,7 +54,7 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 - Phase 3 replaces the deterministic Echo with context-aware Gemini responses generated and persisted by the API server.
 - Phase 4 adds conservative structured memory extraction, Google embeddings, Firestore memory metadata, and Qdrant vector storage.
 - Phase 5 adds bounded Qdrant retrieval, failure isolation, duplicate-safe storage, owner-scoped memory management, and the live memory dashboard.
-- Phase 6 adds bounded native Gemini tool calling for owner-scoped memory search and explicit memory creation/update without changing the chat API or UI.
+- Phase 6 adds bounded native Gemini tool calling for owner-scoped memory search and explicit memory creation/update without changing the chat API or UI. Memory-recall requests force one first-turn search that reuses the pre-retrieved result, then return to normal automatic tool selection.
 - Later phases will add application-level feedback adaptation.
 
 ## User preferences

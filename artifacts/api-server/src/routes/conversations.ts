@@ -22,6 +22,7 @@ import {
   buildMemoryRecallQuery,
   formatMemoryContext,
   isMemoryRecallRequest,
+  MEMORY_RECALL_SCORE_THRESHOLD,
   retrieveRelevantMemories,
   isMemoryRetrievalError,
   type RetrievedMemory,
@@ -303,7 +304,7 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
     if (memoryRecallRequest) {
       try {
         initialMemories = await retrieveRelevantMemories(userId, initialMemoryQuery!, {
-          scoreThreshold: 0.45,
+          scoreThreshold: MEMORY_RECALL_SCORE_THRESHOLD,
         });
         memoryContext = formatMemoryContext(initialMemories);
       } catch (error) {
