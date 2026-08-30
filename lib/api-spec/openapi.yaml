@@ -14,6 +14,8 @@ tags:
     description: Authenticated conversation and message operations
   - name: memories
     description: Authenticated long-term memory operations
+  - name: feedback
+    description: Authenticated assistant response feedback operations
 paths:
   /healthz:
     get:
@@ -321,8 +323,101 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /conversations/{conversationId}/feedback:
+    get:
+      operationId: listConversationFeedback
+      tags: [feedback]
+      summary: List feedback for an owned conversation
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      responses:
+        "200":
+          description: Feedback submitted for messages in the conversation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Feedback"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Feedback could not be loaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /conversations/{conversationId}/messages/{messageId}/feedback:
+    post:
+      operationId: submitMessageFeedback
+      tags: [feedback]
+      summary: Submit or update feedback for an owned assistant message
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+        - $ref: "#/components/parameters/MessageId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackInput"
+      responses:
+        "201":
+          description: Saved message feedback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feedback"
+        "400":
+          description: Invalid feedback input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Owned assistant message not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Feedback could not be saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   parameters:
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    MessageId:
+      name: messageId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
     MemoryId:
       name: memoryId
       in: path
@@ -418,6 +513,40 @@ components:
       required:
         - userMessage
         - assistantMessage
+    FeedbackRating:
+      type: string
+      enum: [up, down]
+    Feedback:
+      type: object
+      properties:
+        id:
+          type: string
+        conversationId:
+          type: string
+        messageId:
+          type: string
+        rating:
+          $ref: "#/components/schemas/FeedbackRating"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - conversationId
+        - messageId
+        - rating
+        - createdAt
+        - updatedAt
+    FeedbackInput:
+      type: object
+      properties:
+        rating:
+          $ref: "#/components/schemas/FeedbackRating"
+      required:
+        - rating
     MemoryType:
       type: string
       enum: [preference, interest, goal, fact, instruction, context]

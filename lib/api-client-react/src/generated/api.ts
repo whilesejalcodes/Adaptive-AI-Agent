@@ -23,6 +23,8 @@ import type {
   Conversation,
   ConversationInput,
   ErrorResponse,
+  Feedback,
+  FeedbackInput,
   HealthStatus,
   Memory,
   MemoryInput,
@@ -800,5 +802,156 @@ export const useDeleteMemory = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getDeleteMemoryMutationOptions(options));
+    }
+
+export const getListConversationFeedbackUrl = (conversationId: string,) => {
+
+
+
+
+  return `/api/conversations/${conversationId}/feedback`
+}
+
+/**
+ * @summary List feedback for an owned conversation
+ */
+export const listConversationFeedback = async (conversationId: string, options?: Parameters<typeof customFetch>[1]): Promise<Feedback[]> => {
+
+  return customFetch<Feedback[]>(getListConversationFeedbackUrl(conversationId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConversationFeedbackQueryKey = (conversationId: string,) => {
+    return [
+    `/api/conversations/${conversationId}/feedback`
+    ] as const;
+    }
+
+
+export const getListConversationFeedbackQueryOptions = <TData = Awaited<ReturnType<typeof listConversationFeedback>>, TError = ErrorType<ErrorResponse>>(conversationId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConversationFeedback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConversationFeedbackQueryKey(conversationId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConversationFeedback>>> = ({ signal }) => listConversationFeedback(conversationId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: conversationId !== null && conversationId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConversationFeedback>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConversationFeedbackQueryResult = NonNullable<Awaited<ReturnType<typeof listConversationFeedback>>>
+export type ListConversationFeedbackQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List feedback for an owned conversation
+ */
+
+export function useListConversationFeedback<TData = Awaited<ReturnType<typeof listConversationFeedback>>, TError = ErrorType<ErrorResponse>>(
+ conversationId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConversationFeedback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConversationFeedbackQueryOptions(conversationId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSubmitMessageFeedbackUrl = (conversationId: string,
+    messageId: string,) => {
+
+
+
+
+  return `/api/conversations/${conversationId}/messages/${messageId}/feedback`
+}
+
+/**
+ * @summary Submit or update feedback for an owned assistant message
+ */
+export const submitMessageFeedback = async (conversationId: string,
+    messageId: string,
+    feedbackInput: FeedbackInput, options?: Parameters<typeof customFetch>[1]): Promise<Feedback> => {
+
+  return customFetch<Feedback>(getSubmitMessageFeedbackUrl(conversationId,messageId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(feedbackInput)
+  }
+);}
+
+
+
+
+
+export const getSubmitMessageFeedbackMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitMessageFeedback>>, TError,{conversationId: string;messageId: string;data: BodyType<FeedbackInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitMessageFeedback>>, TError,{conversationId: string;messageId: string;data: BodyType<FeedbackInput>}, TContext> => {
+
+const mutationKey = ['submitMessageFeedback'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitMessageFeedback>>, {conversationId: string;messageId: string;data: BodyType<FeedbackInput>}> = (props) => {
+          const {conversationId,messageId,data} = props ?? {};
+
+          return  submitMessageFeedback(conversationId,messageId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitMessageFeedbackMutationResult = NonNullable<Awaited<ReturnType<typeof submitMessageFeedback>>>
+    export type SubmitMessageFeedbackMutationBody = BodyType<FeedbackInput>
+    export type SubmitMessageFeedbackMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Submit or update feedback for an owned assistant message
+ */
+export const useSubmitMessageFeedback = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitMessageFeedback>>, TError,{conversationId: string;messageId: string;data: BodyType<FeedbackInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitMessageFeedback>>,
+        TError,
+        {conversationId: string;messageId: string;data: BodyType<FeedbackInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitMessageFeedbackMutationOptions(options));
     }
 

@@ -5,6 +5,7 @@ import {
 } from "./gemini";
 import { getAgentToolDeclarations, executeAgentToolCall, type AgentToolContext } from "./agent-tools";
 import type { RetrievedMemory } from "./memory-retrieval";
+import type { ResponseAdaptation } from "./feedback";
 
 const MAX_TOOL_ITERATIONS = 3;
 const MAX_TOOL_CALLS = 3;
@@ -30,6 +31,7 @@ export type AdaptiveAgentInput = {
   initialMemoryQuery?: string;
   initialMemoryRetrievalFailed?: boolean;
   memoryRecallRequest?: boolean;
+  adaptation?: ResponseAdaptation;
 };
 
 export type AdaptiveAgentResult = {
@@ -56,6 +58,7 @@ export async function runAdaptiveAgent(input: AdaptiveAgentInput): Promise<Adapt
       input.memoryContext,
       getAgentToolDeclarations(),
       input.memoryRecallRequest && iteration === 0,
+      input.adaptation,
     );
     if (turn.functionCalls.length === 0) {
       if (!turn.text) {

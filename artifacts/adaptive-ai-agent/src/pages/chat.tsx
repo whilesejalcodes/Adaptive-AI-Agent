@@ -4,12 +4,16 @@ import ReactMarkdown from 'react-markdown';
 import { Link } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  getListConversationFeedbackQueryKey,
   getListConversationMessagesQueryKey,
   getListConversationsQueryKey,
   useCreateConversation,
   useListConversationMessages,
   useListConversations,
+  useListConversationFeedback,
   useSendConversationMessage,
+  useSubmitMessageFeedback,
+  type Feedback,
   type Message as ApiMessage,
 } from '@workspace/api-client-react';
 import { WorkspaceShell } from '@/components/workspace-shell';
@@ -75,18 +79,22 @@ function Message({
   message,
   userInitials,
   onFeedback,
+  feedback,
+  feedbackPending,
+  feedbackDisabled,
+  feedbackSaved,
+  feedbackError,
 }: {
   message: ApiMessage;
   userInitials: string;
-  onFeedback: (id: string, value: 'up' | 'down') => void;
+  onFeedback: (id: string, value: Feedback['rating']) => void;
+  feedback: Feedback['rating'] | null;
+  feedbackPending: boolean;
+  feedbackDisabled: boolean;
+  feedbackSaved: boolean;
+  feedbackError: boolean;
 }) {
-  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
   const isUser = message.role === 'user';
-
-  function feedbackClick(value: 'up' | 'down') {
-    setFeedback(value);
-    onFeedback(message.id, value);
-  }
 
   return (
     <article className={`message ${isUser ? 'user' : ''}`} data-testid={`message-${message.id}`}>
@@ -95,9 +103,35 @@ function Message({
         <div className="message-meta">{isUser ? 'you' : 'adaptive'} · {messageTime(message.timestamp)}</div>
         <div className="message-bubble">{isUser ? message.text : <MarkdownResponse text={message.text} />}</div>
         {!isUser && (
-          <div className="mt-2 flex items-center gap-1">
-            <button className={`icon-btn ${feedback === 'up' ? 'text-[hsl(var(--primary))]' : ''}`} type="button" onClick={() => feedbackClick('up')} aria-label="Helpful response" data-testid={`button-feedback-up-${message.id}`}><ThumbsUp size={13} /></button>
-            <button className={`icon-btn ${feedback === 'down' ? 'text-[hsl(var(--primary))]' : ''}`} type="button" onClick={() => feedbackClick('down')} aria-label="Unhelpful response" data-testid={`button-feedback-down-${message.id}`}><ThumbsDown size={13} /></button>
+          <div className="mt-2 flex min-h-8 items-center gap-1">
+            <button
+              className={`icon-btn ${feedback === 'up' ? 'text-[hsl(var(--primary))]' : ''}`}
+              type="button"
+              onClick={() => onFeedback(message.id, 'up')}
+              aria-label="Helpful response"
+              aria-pressed={feedback === 'up'}
+              disabled={feedbackDisabled}
+              data-testid={`button-feedback-up-${message.id}`}
+            >
+              <ThumbsUp size={13} />
+            </button>
+            <button
+              className={`icon-btn ${feedback === 'down' ? 'text-[hsl(var(--primary))]' : ''}`}
+              type="button"
+              onClick={() => onFeedback(message.id, 'down')}
+              aria-label="Unhelpful response"
+              aria-pressed={feedback === 'down'}
+              disabled={feedbackDisabled}
+              data-testid={`button-feedback-down-${message.id}`}
+            >
+              <ThumbsDown size={13} />
+            </button>
+            <span
+              className={`ml-1 text-[10px] ${feedbackError ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--muted-foreground))]'}`}
+              role={feedbackError ? 'alert' : feedbackSaved || feedbackPending ? 'status' : undefined}
+            >
+              {feedbackPending ? 'Saving…' : feedbackError ? 'Could not save' : feedbackSaved ? 'Saved' : ''}
+            </span>
           </div>
         )}
       </div>
@@ -125,19 +159,37 @@ export function ChatPage() {
       retry: false,
     },
   });
+  const feedbackQuery = useListConversationFeedback(selectedConversationId ?? '', {
+    query: {
+      queryKey: getListConversationFeedbackQueryKey(selectedConversationId ?? ''),
+      enabled: typeof selectedConversationId === 'string',
+      retry: false,
+    },
+  });
   const createConversationMutation = useCreateConversation();
   const sendMessageMutation = useSendConversationMessage();
+  const submitFeedbackMutation = useSubmitMessageFeedback();
   const conversations = conversationsQuery.data ?? [];
   const messages = messagesQuery.data ?? [];
+  const feedback = feedbackQuery.data ?? [];
   const selectedConversation = conversations.find((item) => item.id === selectedConversationId);
   const isThinking = createConversationMutation.isPending || sendMessageMutation.isPending;
   const displayName = user?.displayName || user?.email || 'You';
   const userInitials = initials(displayName);
+  const [feedbackPendingMessageId, setFeedbackPendingMessageId] = useState<string | null>(null);
+  const [feedbackSavedMessageId, setFeedbackSavedMessageId] = useState<string | null>(null);
+  const [feedbackErrorMessageId, setFeedbackErrorMessageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedConversationId !== undefined || !conversationsQuery.isFetched) return;
     setSelectedConversationId(conversationsQuery.data?.[0]?.id ?? null);
   }, [conversationsQuery.data, conversationsQuery.isFetched, selectedConversationId]);
+
+  useEffect(() => {
+    setFeedbackPendingMessageId(null);
+    setFeedbackSavedMessageId(null);
+    setFeedbackErrorMessageId(null);
+  }, [selectedConversationId]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -183,6 +235,36 @@ export function ChatPage() {
     setNotice('');
   }
 
+  async function handleFeedback(messageId: string, rating: Feedback['rating']) {
+    const conversationId = selectedConversationId;
+    if (!conversationId || feedbackPendingMessageId) return;
+
+    setFeedbackPendingMessageId(messageId);
+    setFeedbackSavedMessageId(null);
+    setFeedbackErrorMessageId(null);
+    try {
+      const savedFeedback = await submitFeedbackMutation.mutateAsync({
+        conversationId,
+        messageId,
+        data: { rating },
+      });
+      queryClient.setQueryData<Feedback[]>(
+        getListConversationFeedbackQueryKey(conversationId),
+        (current = []) => [
+          ...current.filter((item) => item.messageId !== savedFeedback.messageId),
+          savedFeedback,
+        ],
+      );
+      setFeedbackSavedMessageId(messageId);
+    } catch {
+      setFeedbackErrorMessageId(messageId);
+    } finally {
+      setFeedbackPendingMessageId(null);
+    }
+  }
+
+  const feedbackByMessageId = new Map(feedback.map((item) => [item.messageId, item.rating]));
+
   return (
     <WorkspaceShell>
       <div className="topbar">
@@ -205,6 +287,11 @@ export function ChatPage() {
               <Sparkles size={15} /><span>We could not load this conversation. Sign in again if your session has expired.</span>
             </div>
           )}
+          {feedbackQuery.isError && (
+            <div className="notice border-[hsl(var(--destructive)/.35)] text-[hsl(var(--destructive))]" role="alert" data-testid="status-feedback-load-error">
+              <Sparkles size={15} /><span>Feedback could not be loaded. You can try again later.</span>
+            </div>
+          )}
           {messages.length === 0 && !isThinking ? (
             <div className="card memory-empty my-8" data-testid="empty-chat">
               <Sparkles size={24} /><h2>{conversationsQuery.isLoading ? 'Loading your conversations…' : 'Start with what’s on your mind.'}</h2><p>There is no wrong place to begin. The thread gets more useful as you return to it.</p>
@@ -212,7 +299,19 @@ export function ChatPage() {
             </div>
           ) : (
             <div className="conversation-list" aria-live="polite">
-              {messages.map((message) => <Message key={message.id} message={message} userInitials={userInitials} onFeedback={() => setNotice('Thanks — feedback adaptation arrives in a later phase.')} />)}
+               {messages.map((message) => (
+                 <Message
+                   key={message.id}
+                   message={message}
+                   userInitials={userInitials}
+                   onFeedback={handleFeedback}
+                   feedback={feedbackByMessageId.get(message.id) ?? null}
+                   feedbackPending={feedbackPendingMessageId === message.id}
+                   feedbackDisabled={feedbackPendingMessageId !== null}
+                   feedbackSaved={feedbackSavedMessageId === message.id}
+                   feedbackError={feedbackErrorMessageId === message.id}
+                 />
+               ))}
               {isThinking && (
                 <article className="message" data-testid="status-assistant-thinking">
                   <div className="message-avatar" aria-hidden="true">a/</div>

@@ -217,3 +217,50 @@ export const DeleteMemoryParams = zod.object({
 export const DeleteMemoryResponse = zod.void()
 
 
+/**
+ * @summary List feedback for an owned conversation
+ */
+
+
+
+export const ListConversationFeedbackParams = zod.object({
+  "conversationId": zod.coerce.string().min(1)
+})
+
+export const ListConversationFeedbackResponseItem = zod.object({
+  "id": zod.string(),
+  "conversationId": zod.string(),
+  "messageId": zod.string(),
+  "rating": zod.enum(['up', 'down']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListConversationFeedbackResponse = zod.array(ListConversationFeedbackResponseItem)
+
+
+/**
+ * @summary Submit or update feedback for an owned assistant message
+ */
+
+
+
+
+export const SubmitMessageFeedbackParams = zod.object({
+  "conversationId": zod.coerce.string().min(1),
+  "messageId": zod.coerce.string().min(1)
+})
+
+export const SubmitMessageFeedbackBody = zod.object({
+  "rating": zod.enum(['up', 'down'])
+})
+
+export const SubmitMessageFeedbackResponse = zod.object({
+  "id": zod.string(),
+  "conversationId": zod.string(),
+  "messageId": zod.string(),
+  "rating": zod.enum(['up', 'down']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+

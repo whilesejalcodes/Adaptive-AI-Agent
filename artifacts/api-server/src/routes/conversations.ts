@@ -28,6 +28,7 @@ import {
   type RetrievedMemory,
 } from "../lib/memory-retrieval";
 import { MemoryPipelineError } from "../lib/memory-types";
+import { getResponseAdaptation } from "../lib/feedback";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -315,6 +316,12 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
         );
       }
     }
+    let adaptation: { preferConcise: boolean } | undefined;
+    try {
+      adaptation = await getResponseAdaptation(userId);
+    } catch (error) {
+      req.log.warn({ error }, "Response adaptation unavailable; continuing with default style");
+    }
     const agentResult = await runAdaptiveAgent({
       userId,
       userText: text,
@@ -324,6 +331,7 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
       initialMemoryQuery,
       initialMemoryRetrievalFailed,
       memoryRecallRequest,
+      adaptation,
     });
     const assistantText = agentResult.text;
     const assistantMessage: MessageDocument = {

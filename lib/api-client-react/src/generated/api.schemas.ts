@@ -59,6 +59,27 @@ export interface MessageExchange {
   assistantMessage: Message;
 }
 
+export type FeedbackRating = typeof FeedbackRating[keyof typeof FeedbackRating];
+
+
+export const FeedbackRating = {
+  up: 'up',
+  down: 'down',
+} as const;
+
+export interface Feedback {
+  id: string;
+  conversationId: string;
+  messageId: string;
+  rating: FeedbackRating;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeedbackInput {
+  rating: FeedbackRating;
+}
+
 export type MemoryType = typeof MemoryType[keyof typeof MemoryType];
 
 
