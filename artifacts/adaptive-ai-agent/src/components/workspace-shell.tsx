@@ -1,6 +1,7 @@
-import { Brain, Compass, LogOut, MessageSquare, Plus, Sparkles } from 'lucide-react';
+import { Brain, Compass, LogOut, Menu, MessageSquare, Plus, Sparkles, X } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { getHealthCheckQueryKey, useHealthCheck } from '@workspace/api-client-react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from '@/components/auth-provider';
 
 function Brand() {
@@ -49,15 +50,39 @@ export function MobileNavigation() {
   );
 }
 
-export function WorkspaceShell({ children }: { children: React.ReactNode }) {
+type WorkspaceShellProps = {
+  children: ReactNode;
+  mobilePanel?: (close: () => void) => ReactNode;
+};
+
+export function WorkspaceShell({ children, mobilePanel }: WorkspaceShellProps) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const displayName = user?.displayName || user?.email || 'Your workspace';
   const initials = displayName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setMobileMenuOpen(false);
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
+
   async function handleLogout() {
+    setMobileMenuOpen(false);
     await logout();
     setLocation('/login');
+  }
+
+  function closeMobileMenu() {
+    setMobileMenuOpen(false);
   }
 
   return (
@@ -98,8 +123,57 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
       <div className="workspace-main">
         <header className="mobile-topbar">
           <Brand />
-          <ConnectionStatus />
+          <div className="mobile-topbar-actions">
+            <ConnectionStatus />
+            <button
+              className="mobile-menu-toggle"
+              type="button"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-workspace-menu"
+              aria-label={mobileMenuOpen ? 'Close workspace menu' : 'Open workspace menu'}
+              data-testid="button-mobile-menu"
+            >
+              {mobileMenuOpen ? <X size={19} /> : <Menu size={19} />}
+            </button>
+          </div>
         </header>
+        {mobileMenuOpen && (
+          <div className="mobile-drawer-backdrop" role="presentation" onClick={closeMobileMenu}>
+            <aside
+              className="mobile-drawer"
+              id="mobile-workspace-menu"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="mobile-workspace-menu-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mobile-drawer-header">
+                <div>
+                  <div className="eyebrow rail-caption">Adaptive</div>
+                  <h2 id="mobile-workspace-menu-title">Your workspace</h2>
+                </div>
+                <button className="icon-btn" type="button" onClick={closeMobileMenu} aria-label="Close workspace menu" data-testid="button-close-mobile-menu">
+                  <X size={17} />
+                </button>
+              </div>
+              <nav className="mobile-drawer-nav" aria-label="Mobile workspace navigation">
+                {navItems.map(({ href, label, icon: Icon }) => (
+                  <Link key={href} href={href} className={`nav-link ${location === href ? 'active' : ''}`} onClick={closeMobileMenu} data-testid={`link-drawer-${label.toLowerCase()}`}>
+                    <Icon size={17} strokeWidth={1.8} />
+                    <span className="nav-label">{label}</span>
+                    {location === href && <span className="mobile-drawer-current">Current</span>}
+                  </Link>
+                ))}
+              </nav>
+              {mobilePanel && <div className="mobile-drawer-panel">{mobilePanel(closeMobileMenu)}</div>}
+              <button className="nav-link mobile-drawer-signout" type="button" onClick={handleLogout} data-testid="button-mobile-logout">
+                <LogOut size={17} strokeWidth={1.8} />
+                <span className="nav-label">Sign out</span>
+              </button>
+            </aside>
+          </div>
+        )}
         {children}
         <MobileNavigation />
       </div>

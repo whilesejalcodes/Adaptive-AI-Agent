@@ -22,6 +22,7 @@ import type {
 import type {
   Conversation,
   ConversationInput,
+  ConversationUpdate,
   ErrorResponse,
   Feedback,
   FeedbackInput,
@@ -285,6 +286,78 @@ export const useCreateConversation = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getCreateConversationMutationOptions(options));
+    }
+
+export const getUpdateConversationUrl = (conversationId: string,) => {
+
+
+
+
+  return `/api/conversations/${conversationId}`
+}
+
+/**
+ * @summary Update the title of an owned conversation
+ */
+export const updateConversation = async (conversationId: string,
+    conversationUpdate: ConversationUpdate, options?: Parameters<typeof customFetch>[1]): Promise<Conversation> => {
+
+  return customFetch<Conversation>(getUpdateConversationUrl(conversationId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(conversationUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateConversationMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateConversation>>, TError,{conversationId: string;data: BodyType<ConversationUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateConversation>>, TError,{conversationId: string;data: BodyType<ConversationUpdate>}, TContext> => {
+
+const mutationKey = ['updateConversation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateConversation>>, {conversationId: string;data: BodyType<ConversationUpdate>}> = (props) => {
+          const {conversationId,data} = props ?? {};
+
+          return  updateConversation(conversationId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateConversationMutationResult = NonNullable<Awaited<ReturnType<typeof updateConversation>>>
+    export type UpdateConversationMutationBody = BodyType<ConversationUpdate>
+    export type UpdateConversationMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Update the title of an owned conversation
+ */
+export const useUpdateConversation = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateConversation>>, TError,{conversationId: string;data: BodyType<ConversationUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateConversation>>,
+        TError,
+        {conversationId: string;data: BodyType<ConversationUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateConversationMutationOptions(options));
     }
 
 export const getListConversationMessagesUrl = (conversationId: string,) => {

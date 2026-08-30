@@ -51,6 +51,33 @@ export const CreateConversationResponse = zod.object({
 
 
 /**
+ * @summary Update the title of an owned conversation
+ */
+
+
+
+export const UpdateConversationParams = zod.object({
+  "conversationId": zod.coerce.string().min(1)
+})
+
+export const updateConversationBodyTitleMax = 120;
+
+
+
+export const UpdateConversationBody = zod.object({
+  "title": zod.string().min(1).max(updateConversationBodyTitleMax)
+})
+
+export const UpdateConversationResponse = zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "title": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List messages for an owned conversation
  */
 

@@ -8,6 +8,7 @@
 
 export * from './conversation';
 export * from './conversationInput';
+export * from './conversationUpdate';
 export * from './errorResponse';
 export * from './feedback';
 export * from './feedbackInput';

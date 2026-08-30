@@ -29,6 +29,14 @@ export interface ConversationInput {
   title: string;
 }
 
+export interface ConversationUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
+}
+
 export type MessageRole = typeof MessageRole[keyof typeof MessageRole];
 
 

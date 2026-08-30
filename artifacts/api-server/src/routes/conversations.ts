@@ -8,6 +8,9 @@ import {
   SendConversationMessageBody,
   SendConversationMessageParams,
   SendConversationMessageResponse,
+  UpdateConversationBody,
+  UpdateConversationParams,
+  UpdateConversationResponse,
 } from "@workspace/api-zod";
 import { Timestamp } from "firebase-admin/firestore";
 import { firestore } from "../lib/firebase-admin";
@@ -195,6 +198,50 @@ router.post("/conversations", async (req, res) => {
   } catch {
     req.log.error("Failed to create conversation");
     res.status(500).json({ error: "Unable to create conversation." });
+  }
+});
+
+router.patch("/conversations/:conversationId", async (req, res) => {
+  const userId = req.user?.uid;
+  if (!userId) {
+    res.status(401).json({ error: "Authentication required." });
+    return;
+  }
+
+  const parsedParams = UpdateConversationParams.safeParse({
+    conversationId: req.params.conversationId,
+  });
+  const parsedBody = UpdateConversationBody.safeParse(req.body);
+  const title = parsedBody.success ? parsedBody.data.title.trim() : "";
+  if (!parsedParams.success || !parsedBody.success || !title) {
+    res.status(400).json({ error: "Conversation title is required." });
+    return;
+  }
+
+  try {
+    const conversation = await findOwnedConversation(
+      parsedParams.data.conversationId,
+      userId,
+    );
+    if (!conversation) {
+      res.status(404).json({ error: "Conversation not found." });
+      return;
+    }
+
+    const updatedAt = Timestamp.now();
+    await conversation.ref.update({ title, updatedAt });
+    res.json(
+      UpdateConversationResponse.parse(
+        serializeConversation({
+          ...conversationFromSnapshot(conversation),
+          title,
+          updatedAt,
+        }),
+      ),
+    );
+  } catch {
+    req.log.error("Failed to update conversation");
+    res.status(500).json({ error: "Unable to update conversation." });
   }
 });
 
