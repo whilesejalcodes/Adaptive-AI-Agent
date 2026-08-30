@@ -501,7 +501,21 @@ export function ChatPage() {
           )}
           <div className="composer-dock">
             <form className="composer" onSubmit={handleSubmit}>
-              <textarea value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write into the thread…" aria-label="Message adaptive" rows={1} maxLength={4000} data-testid="input-message" />
+              <textarea
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' || event.shiftKey) return;
+                  event.preventDefault();
+                  if (!draft.trim() || isThinking) return;
+                  event.currentTarget.form?.requestSubmit();
+                }}
+                placeholder="Write into the thread…"
+                aria-label="Message adaptive"
+                rows={1}
+                maxLength={4000}
+                data-testid="input-message"
+              />
               <button className="send-btn" type="submit" disabled={!draft.trim() || isThinking} aria-label="Send message" data-testid="button-send-message"><ArrowUp size={17} /></button>
             </form>
             <div className="mt-2 flex items-center justify-between px-1 text-[10px] text-[hsl(var(--muted-foreground))]"><span>Gemini responds using this conversation as context.</span><span className="font-mono">return ↵</span></div>
