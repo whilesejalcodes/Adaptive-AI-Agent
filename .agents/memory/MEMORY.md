@@ -5,3 +5,4 @@
 - [Memory recall retrieval](memory-recall-retrieval.md) — explicit recall uses one topic-focused retrieval and a first-turn search reuse path; ordinary chat should not auto-search.
 - [API runtime validation](api-runtime-validation.md) — validate TypeScript server modules through the package build when direct Node execution cannot resolve extensionless imports.
 - [Artifact package installation](artifact-package-installation.md) — target frontend dependencies with the artifact filter when the package helper defaults to the workspace root.
+- [Video artifact registration](video-artifact-registration.md) — create video artifacts through the artifact registry before transferring delegated compositions; a directory and manifest alone are not presentable.

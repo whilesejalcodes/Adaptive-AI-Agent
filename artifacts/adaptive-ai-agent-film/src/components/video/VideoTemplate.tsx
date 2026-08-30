@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useVideoPlayer } from '@/lib/video';
 import { Scene1 } from './video_scenes/Scene1';
 import { Scene2 } from './video_scenes/Scene2';
@@ -9,7 +9,7 @@ import { Scene5 } from './video_scenes/Scene5';
 import { Scene6 } from './video_scenes/Scene6';
 import { Scene7 } from './video_scenes/Scene7';
 
-const SCENE_DURATIONS = {
+export const SCENE_DURATIONS = {
   problem: 5200,
   chat: 6200,
   memory: 6500,
@@ -29,11 +29,25 @@ const SCENES = [
   { key: 'close', render: () => <Scene7 /> },
 ];
 
-export function VideoTemplate() {
-  const durations = useMemo(() => SCENE_DURATIONS, []);
+export interface VideoTemplateProps {
+  durations?: Record<string, number>;
+  loop?: boolean;
+  onSceneChange?: (sceneKey: string) => void;
+}
+
+export function VideoTemplate({
+  durations: requestedDurations = SCENE_DURATIONS,
+  onSceneChange,
+}: VideoTemplateProps = {}) {
+  const durations = useMemo(() => requestedDurations, [requestedDurations]);
   const { currentScene } = useVideoPlayer({ durations });
-  const activeIndex = Math.max(0, SCENES.findIndex((scene) => scene.key === currentScene));
+  const baseSceneKey = currentScene.replace(/_r[12]$/, '');
+  const activeIndex = Math.max(0, SCENES.findIndex((scene) => scene.key === baseSceneKey));
   const active = SCENES[activeIndex] ?? SCENES[0];
+
+  useEffect(() => {
+    onSceneChange?.(currentScene);
+  }, [currentScene, onSceneChange]);
 
   return (
     <main className="video-frame" aria-label="Adaptive AI Agent system film">
@@ -50,7 +64,7 @@ export function VideoTemplate() {
       <div className="progress-line"><motion.div className="progress-fill" animate={{ scaleX: (activeIndex + 1) / SCENES.length }} transition={{ duration: .6, ease: 'easeOut' }} /></div>
       <motion.div className="scene-counter" animate={{ opacity: .85 }}>{String(activeIndex + 1).padStart(2, '0')} / 07</motion.div>
       <AnimatePresence mode="sync" initial={false}>
-        <motion.div key={active.key} style={{ position: 'absolute', inset: 0 }}>
+        <motion.div key={currentScene} style={{ position: 'absolute', inset: 0 }}>
           {active.render()}
         </motion.div>
       </AnimatePresence>

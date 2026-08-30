@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { VideoTemplate } from '@/components/video/VideoTemplate';
+import VideoWithControls from '@/components/video/VideoWithControls';
 import './index.css';
 
-createRoot(document.getElementById('root')!).render(<VideoTemplate />);
+createRoot(document.getElementById('root')!).render(<VideoWithControls />);
