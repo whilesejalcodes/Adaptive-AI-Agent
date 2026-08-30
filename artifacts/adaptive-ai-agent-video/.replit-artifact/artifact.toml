@@ -1,0 +1,29 @@
+kind = "video"
+previewPath = "/adaptive-ai-agent-video"
+title = "Adaptive AI Agent — System Film"
+description = "An animated explainer for the authenticated, memory-aware Adaptive AI Agent architecture."
+version = "1.0.0"
+id = "artifacts/adaptive-ai-agent-video"
+router = "path"
+videoAspectRatio = "16:9"
+
+[[services]]
+name = "web"
+paths = ["/adaptive-ai-agent-video"]
+localPort = 23386
+
+[services.development]
+run = "pnpm --filter @workspace/adaptive-ai-agent-video run dev"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/adaptive-ai-agent-video", "run", "build"]
+serve = "static"
+publicDir = "artifacts/adaptive-ai-agent-video/dist"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23386"
+BASE_PATH = "/adaptive-ai-agent-video/"
