@@ -47,6 +47,40 @@ function retrievalSettings() {
   };
 }
 
+const MEMORY_RECALL_PATTERNS = [
+  /\bdo you remember\b/i,
+  /\bwhat did i (?:tell|say|ask)\b/i,
+  /\bwhat do you know about me\b/i,
+  /\bwhat have i asked you to remember\b/i,
+  /\bwhat .* previously\b/i,
+  /\bwhat .* yesterday\b/i,
+  /\b(?:saved|stored|long[- ]term) memor(?:y|ies)\b/i,
+];
+
+export function isMemoryRecallRequest(userText: string): boolean {
+  if (MEMORY_RECALL_PATTERNS.some((pattern) => pattern.test(userText))) {
+    return true;
+  }
+  return /\bmy (?:preferences?|goals?|career goal|interests?|background)\b/i.test(userText) &&
+    /\b(?:what|which|remember|know|tell me)\b/i.test(userText);
+}
+
+export function buildMemoryRecallQuery(userText: string): string {
+  const topic = userText
+    .replace(/\bdo you remember\b/gi, "")
+    .replace(/\bwhat did i (?:tell|say|ask)(?: you)?\b/gi, "")
+    .replace(/\bwhat do you know about me\b/gi, "")
+    .replace(/\bwhat have i asked you to remember\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return `Relevant saved personal information about the user: ${topic || userText}`;
+}
+
+export type MemoryRetrievalOptions = {
+  scoreThreshold?: number;
+};
+
 function isMemoryType(value: unknown): value is MemoryType {
   return typeof value === "string" &&
     (MEMORY_TYPES as readonly string[]).includes(value);
@@ -81,8 +115,10 @@ function validCandidate(
 export async function retrieveRelevantMemories(
   userId: string,
   userText: string,
+  options: MemoryRetrievalOptions = {},
 ): Promise<RetrievedMemory[]> {
   const settings = retrievalSettings();
+  const scoreThreshold = options.scoreThreshold ?? settings.scoreThreshold;
   const queryEmbedding = await generateMemoryEmbedding(
     userText,
     "conversation query",
@@ -92,7 +128,7 @@ export async function retrieveRelevantMemories(
     vector: queryEmbedding.vector,
     userId,
     limit: settings.topK,
-    scoreThreshold: settings.scoreThreshold,
+    scoreThreshold,
   });
   if (candidates.length === 0) return [];
 

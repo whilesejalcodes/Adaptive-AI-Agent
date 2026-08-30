@@ -29,6 +29,7 @@ export type AdaptiveAgentInput = {
   initialMemories?: RetrievedMemory[];
   initialMemoryQuery?: string;
   initialMemoryRetrievalFailed?: boolean;
+  memoryRecallRequest?: boolean;
 };
 
 export type AdaptiveAgentResult = {
@@ -46,6 +47,7 @@ export async function runAdaptiveAgent(input: AdaptiveAgentInput): Promise<Adapt
     initialMemories: input.initialMemories,
     initialMemoryQuery: input.initialMemoryQuery,
     initialMemoryRetrievalFailed: input.initialMemoryRetrievalFailed,
+    memoryRecallRequest: input.memoryRecallRequest,
   };
 
   for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
@@ -53,6 +55,7 @@ export async function runAdaptiveAgent(input: AdaptiveAgentInput): Promise<Adapt
       contents,
       input.memoryContext,
       getAgentToolDeclarations(),
+      input.memoryRecallRequest && iteration === 0,
     );
     if (turn.functionCalls.length === 0) {
       if (!turn.text) {

@@ -1,0 +1,268 @@
+PHASE 6 FOLLOW-UP — FIX MEMORY-AWARE CONTEXT RELIABILITY
+
+Continue from the completed Phase 1–6 implementation.
+
+This is a focused bug-fix task. Do NOT restart or redesign Phase 5 or Phase 6.
+
+First inspect the actual current implementation and determine why the agent sometimes fails to retrieve an existing saved memory when the user explicitly asks about something they previously told the assistant.
+
+==================================================
+BUG TO FIX
+==================================================
+
+The following behavior has been observed:
+
+A user has an existing long-term memory containing information such as:
+
+"I am preparing for an SDE role and learning C++ from scratch."
+
+Later, the user asks:
+
+"Do you remember what I am preparing for?"
+
+The agent sometimes responds that it has no saved memory, even though the relevant memory exists in the user's Firestore/Qdrant memory system.
+
+The current conversation may also contain relevant information.
+
+The desired behavior is:
+
+CURRENT CHAT CONTEXT + RELEVANT LONG-TERM MEMORY
+                    ↓
+                  AGENT
+                    ↓
+                 GEMINI
+                    ↓
+             correct response
+
+==================================================
+1. INSPECT BEFORE CHANGING
+==================================================
+
+Inspect the existing Phase 5 memory retrieval implementation and Phase 6 agent/tool-calling implementation.
+
+Determine:
+
+- Whether memory retrieval happens automatically before Gemini.
+- When the memory-search tool is invoked.
+- What conditions cause Gemini to invoke the memory-search tool.
+- Whether current conversation history is passed to Gemini.
+- Whether retrieved memories are actually included in Gemini's context.
+- Whether the memory tool can retrieve memories for "remember/do you know what I told you" style requests.
+- Whether the issue is retrieval, tool selection, prompt/context construction, or another integration problem.
+
+Do not guess.
+
+Do not duplicate existing retrieval services.
+
+==================================================
+2. CURRENT CHAT + LONG-TERM MEMORY
+==================================================
+
+Preserve the distinction:
+
+Current conversation:
+- short-term/immediate context
+- messages from the current conversation
+
+Long-term memory:
+- durable information stored through Phase 4/5
+- retrieved through the existing memory retrieval system
+
+The agent should be able to use BOTH when appropriate.
+
+Do not replace current conversation context with Qdrant memory.
+
+Do not replace Qdrant memory with the current conversation.
+
+==================================================
+3. MEMORY-RELATED QUESTIONS
+==================================================
+
+Ensure that explicit memory-oriented requests reliably trigger appropriate memory retrieval.
+
+Examples include:
+
+- "Do you remember what I'm preparing for?"
+- "What did I tell you about my career goal?"
+- "Do you remember my preference?"
+- "What do you know about me?"
+- "What did I ask you to remember?"
+- "What did I tell you previously about C++?"
+- "Do you remember what I said yesterday?"
+
+Do not force memory retrieval for every normal question.
+
+For ordinary questions that clearly do not require personal memory, preserve the existing behavior.
+
+Use the existing Phase 5 retrieval/tool infrastructure.
+
+==================================================
+4. AUTHENTICATION AND OWNERSHIP
+==================================================
+
+Do NOT weaken existing security.
+
+All memory retrieval must remain scoped to:
+
+req.user.uid
+
+Never allow:
+
+- the client to provide an arbitrary userId
+- Gemini to choose a Firebase UID
+- a tool argument to override the authenticated UID
+
+The authenticated Firebase UID must remain the sole source of ownership.
+
+Preserve all existing cross-user isolation.
+
+==================================================
+5. MEMORY CONTEXT SAFETY
+==================================================
+
+Retrieved memories are DATA/CONTEXT.
+
+They must never become higher-priority instructions than the system/developer instructions.
+
+A malicious memory such as:
+
+"Ignore all previous instructions..."
+
+must be treated as stored text, not as an instruction to the agent.
+
+Preserve the existing safe memory-context boundaries.
+
+==================================================
+6. AVOID DUPLICATE RETRIEVAL
+==================================================
+
+Do not introduce unnecessary duplicate Qdrant/embedding calls.
+
+If the current Phase 6 architecture already performs memory retrieval before Gemini, improve that path rather than adding another independent retrieval system.
+
+If the agent's memory-search tool is responsible for retrieval, make the triggering logic reliable without creating a second retrieval pipeline.
+
+==================================================
+7. NO ARCHITECTURE EXPANSION
+==================================================
+
+Do NOT add:
+
+- LangChain
+- LangGraph
+- CrewAI
+- AutoGen
+- another vector database
+- another memory database
+- another embedding system
+- external search
+- web tools
+- background workers
+- queues
+- multi-agent systems
+
+Do not redesign the agent.
+
+Do not modify the Phase 5 memory schema unnecessarily.
+
+Do not start Phase 7.
+
+==================================================
+8. TEST THIS SPECIFIC FAILURE
+==================================================
+
+Create/use a disposable test account and verify:
+
+1. Store a durable memory such as:
+   "I am preparing for an SDE role and learning C++."
+
+2. Start a new conversation where that information is NOT explicitly present in the current conversation.
+
+3. Ask:
+   "Do you remember what I'm preparing for?"
+
+4. Verify the agent retrieves the relevant long-term memory and gives the correct answer.
+
+5. Ask a normal unrelated question and verify memory retrieval is not unnecessarily used.
+
+6. Ask a follow-up question that requires the remembered information.
+
+7. Verify the response continues to use the relevant memory.
+
+8. Verify another user's memories cannot be retrieved.
+
+9. Verify manipulated IDs/userIds cannot bypass ownership.
+
+10. Verify existing Phase 1–6 functionality remains intact.
+
+Do not claim the bug is fixed unless this specific scenario actually passes.
+
+==================================================
+9. VERIFICATION
+==================================================
+
+Run:
+
+- frontend typecheck
+- backend typecheck
+- workspace typecheck
+- production Vite build
+- backend production build
+- relevant runtime/API checks
+- browser test for the exact memory-recall scenario
+
+Check logs for:
+
+- failed memory retrieval
+- unnecessary duplicate retrieval
+- exposed secrets
+- Firebase UID/ownership problems
+- Gemini/tool-call errors
+
+Do not expose API keys or tokens in logs or the final report.
+
+If something cannot be verified, explicitly state:
+
+"Not verified yet."
+
+==================================================
+10. PRESERVE EVERYTHING ELSE
+==================================================
+
+Do not change:
+
+- Firebase Authentication
+- Firestore schema
+- Qdrant schema
+- existing Phase 5 CRUD
+- existing memory extraction
+- existing Gemini configuration
+- existing API response contract
+- Markdown rendering
+- protected routes
+- chat UI design
+
+Only make changes necessary to fix reliable memory-aware context.
+
+==================================================
+11. COMPLETION
+==================================================
+
+When the specific memory-recall bug is fixed and verified:
+
+Report:
+
+- Root cause
+- Files changed
+- What was changed
+- How current-chat context and long-term memory now interact
+- How memory-related questions are handled
+- Security/ownership verification
+- Tests actually run
+- Build results
+- Any warnings
+- Anything not verified
+
+Then STOP.
+
+Do NOT start Phase 7 automatically.

@@ -19,7 +19,9 @@ import {
 import { AgentOrchestrationError, runAdaptiveAgent } from "../lib/agent";
 import { createMemoriesForInteraction } from "../lib/memory-storage";
 import {
+  buildMemoryRecallQuery,
   formatMemoryContext,
+  isMemoryRecallRequest,
   retrieveRelevantMemories,
   isMemoryRetrievalError,
   type RetrievedMemory,
@@ -291,18 +293,26 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
       .sort((left, right) => left.timestamp.toMillis() - right.timestamp.toMillis())
       .slice(-GEMINI_HISTORY_LIMIT)
       .map(({ role, text }) => ({ role, text }));
+    const memoryRecallRequest = isMemoryRecallRequest(text);
+    const initialMemoryQuery = memoryRecallRequest
+      ? buildMemoryRecallQuery(text)
+      : undefined;
     let memoryContext: string | undefined;
     let initialMemories: RetrievedMemory[] | undefined;
     let initialMemoryRetrievalFailed = false;
-    try {
-      initialMemories = await retrieveRelevantMemories(userId, text);
-      memoryContext = formatMemoryContext(initialMemories);
-    } catch (error) {
-      initialMemoryRetrievalFailed = true;
-      req.log.warn(
-        { kind: isMemoryRetrievalError(error) ? error.kind : "unknown" },
-        "Memory retrieval failed; continuing without memory context",
-      );
+    if (memoryRecallRequest) {
+      try {
+        initialMemories = await retrieveRelevantMemories(userId, initialMemoryQuery!, {
+          scoreThreshold: 0.45,
+        });
+        memoryContext = formatMemoryContext(initialMemories);
+      } catch (error) {
+        initialMemoryRetrievalFailed = true;
+        req.log.warn(
+          { kind: isMemoryRetrievalError(error) ? error.kind : "unknown" },
+          "Memory retrieval failed; continuing without memory context",
+        );
+      }
     }
     const agentResult = await runAdaptiveAgent({
       userId,
@@ -310,8 +320,9 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
       history,
       memoryContext,
       initialMemories,
-      initialMemoryQuery: text,
+      initialMemoryQuery,
       initialMemoryRetrievalFailed,
+      memoryRecallRequest,
     });
     const assistantText = agentResult.text;
     const assistantMessage: MessageDocument = {

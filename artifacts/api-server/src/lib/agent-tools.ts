@@ -54,6 +54,7 @@ export type AgentToolContext = {
   initialMemories?: RetrievedMemory[];
   initialMemoryQuery?: string;
   initialMemoryRetrievalFailed?: boolean;
+  memoryRecallRequest?: boolean;
 };
 
 type MemorySearchResult = {
@@ -109,7 +110,12 @@ const memorySearchTool: ToolDefinition<
     const normalizedInitialQuery = context.initialMemoryQuery?.trim().toLowerCase();
     let memories: RetrievedMemory[];
 
-    if (normalizedQuery === normalizedInitialQuery) {
+    if (context.memoryRecallRequest) {
+      if (context.initialMemoryRetrievalFailed) {
+        throw new Error("Memory search is temporarily unavailable.");
+      }
+      memories = context.initialMemories ?? [];
+    } else if (normalizedQuery === normalizedInitialQuery) {
       if (context.initialMemoryRetrievalFailed) {
         throw new Error("Memory search is temporarily unavailable.");
       }
