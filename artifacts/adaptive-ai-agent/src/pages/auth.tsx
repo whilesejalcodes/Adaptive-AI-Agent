@@ -98,6 +98,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
               {isSignup ? 'Sign in' : 'Create an account'}
             </button>
           </div>
+          <div className="auth-attribution">Made by Sejal</div>
         </div>
       </section>
     </main>
