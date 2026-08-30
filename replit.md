@@ -42,6 +42,7 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 - Memory extraction runs only after a successful new chat interaction; Firestore is the memory metadata source of truth and Qdrant stores vectors with Firebase UID ownership payloads.
 - Chat retrieval creates one query embedding, filters Qdrant by the verified UID, validates indexed results against Firestore, and passes only bounded relevant notes to Gemini as untrusted context.
 - Authenticated memory APIs support owner-scoped create, list, read, update/re-index, and delete operations; vector deletion completes before metadata deletion.
+- Phase 6 chat generation runs through a bounded server-side orchestrator with a centralized typed registry for native Gemini function calls. Its memory tools reuse the Phase 5 retrieval and storage/update services, and ownership always comes from the verified Firebase UID.
 - Firestore root collections are `users`, `conversations`, and `messages`; ownership comes from the verified UID.
 - API contracts are defined in OpenAPI and generated into shared client/server packages.
 - The web application is rooted at `/` so the primary preview is immediately visible.
@@ -53,7 +54,8 @@ A personal AI workspace that uses persistent memory and feedback to make future 
 - Phase 3 replaces the deterministic Echo with context-aware Gemini responses generated and persisted by the API server.
 - Phase 4 adds conservative structured memory extraction, Google embeddings, Firestore memory metadata, and Qdrant vector storage.
 - Phase 5 adds bounded Qdrant retrieval, failure isolation, duplicate-safe storage, owner-scoped memory management, and the live memory dashboard.
-- Later phases will add tools and application-level feedback adaptation.
+- Phase 6 adds bounded native Gemini tool calling for owner-scoped memory search and explicit memory creation/update without changing the chat API or UI.
+- Later phases will add application-level feedback adaptation.
 
 ## User preferences
 

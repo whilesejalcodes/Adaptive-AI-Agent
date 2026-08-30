@@ -12,16 +12,17 @@ import {
 import { Timestamp } from "firebase-admin/firestore";
 import { firestore } from "../lib/firebase-admin";
 import {
-  generateGeminiReply,
   GEMINI_HISTORY_LIMIT,
   GeminiGenerationError,
   type GeminiConversationMessage,
 } from "../lib/gemini";
+import { AgentOrchestrationError, runAdaptiveAgent } from "../lib/agent";
 import { createMemoriesForInteraction } from "../lib/memory-storage";
 import {
   formatMemoryContext,
   retrieveRelevantMemories,
   isMemoryRetrievalError,
+  type RetrievedMemory,
 } from "../lib/memory-retrieval";
 import { MemoryPipelineError } from "../lib/memory-types";
 import { requireAuth } from "../middlewares/auth";
@@ -291,17 +292,28 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
       .slice(-GEMINI_HISTORY_LIMIT)
       .map(({ role, text }) => ({ role, text }));
     let memoryContext: string | undefined;
+    let initialMemories: RetrievedMemory[] | undefined;
+    let initialMemoryRetrievalFailed = false;
     try {
-      memoryContext = formatMemoryContext(
-        await retrieveRelevantMemories(userId, text),
-      );
+      initialMemories = await retrieveRelevantMemories(userId, text);
+      memoryContext = formatMemoryContext(initialMemories);
     } catch (error) {
+      initialMemoryRetrievalFailed = true;
       req.log.warn(
         { kind: isMemoryRetrievalError(error) ? error.kind : "unknown" },
         "Memory retrieval failed; continuing without memory context",
       );
     }
-    const assistantText = await generateGeminiReply(history, memoryContext);
+    const agentResult = await runAdaptiveAgent({
+      userId,
+      userText: text,
+      history,
+      memoryContext,
+      initialMemories,
+      initialMemoryQuery: text,
+      initialMemoryRetrievalFailed,
+    });
+    const assistantText = agentResult.text;
     const assistantMessage: MessageDocument = {
       id: assistantMessageReference.id,
       conversationId: parsedParams.data.conversationId,
@@ -316,28 +328,30 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
     batch.update(conversation.ref, { updatedAt: assistantMessage.timestamp });
     await batch.commit();
 
-    try {
-      const memoryResult = await createMemoriesForInteraction({
-        userId,
-        conversationId: parsedParams.data.conversationId,
-        userMessageId: userMessage.id,
-        userText: userMessage.text,
-      });
-      if (memoryResult.failed > 0) {
+    if (!agentResult.memoryManaged) {
+      try {
+        const memoryResult = await createMemoriesForInteraction({
+          userId,
+          conversationId: parsedParams.data.conversationId,
+          userMessageId: userMessage.id,
+          userText: userMessage.text,
+        });
+        if (memoryResult.failed > 0) {
+          req.log.warn(
+            {
+              extracted: memoryResult.extracted,
+              indexed: memoryResult.indexed,
+              failed: memoryResult.failed,
+            },
+            "Some extracted memories could not be indexed",
+          );
+        }
+      } catch (error) {
         req.log.warn(
-          {
-            extracted: memoryResult.extracted,
-            indexed: memoryResult.indexed,
-            failed: memoryResult.failed,
-          },
-          "Some extracted memories could not be indexed",
+          { kind: error instanceof MemoryPipelineError ? error.kind : "unknown" },
+          "Memory processing failed after successful chat response",
         );
       }
-    } catch (error) {
-      req.log.warn(
-        { kind: error instanceof MemoryPipelineError ? error.kind : "unknown" },
-        "Memory processing failed after successful chat response",
-      );
     }
 
     const data = {
@@ -346,6 +360,15 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
     };
     res.status(201).json(SendConversationMessageResponse.parse(data));
   } catch (error) {
+    if (error instanceof AgentOrchestrationError) {
+      req.log.warn({ kind: error.kind }, "Agent orchestration stopped safely");
+      res.status(503).json({
+        error: error.kind === "tool-limit"
+          ? "The assistant could not complete that request within its tool-use limit. Please try again."
+          : "The assistant could not complete that tool request. Please try again.",
+      });
+      return;
+    }
     if (error instanceof GeminiGenerationError) {
       req.log.warn({ kind: error.kind }, "Gemini generation failed");
       const status = error.kind === "timeout"

@@ -13,6 +13,7 @@ const DEFAULT_SCORE_THRESHOLD = 0.65;
 const MAX_CONTEXT_LENGTH = 1_800;
 
 export type RetrievedMemory = {
+  id: string;
   text: string;
   type: MemoryType;
   score: number;
@@ -70,6 +71,7 @@ function validCandidate(
     return null;
   }
   return {
+    id: data.id,
     text: data.text,
     type: data.type,
     score: candidate.score,
