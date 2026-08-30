@@ -1,0 +1,425 @@
+PHASE 6 — AGENT ARCHITECTURE + TOOL CALLING
+
+Continue from the existing completed Phase 1–5 implementation.
+
+IMPORTANT:
+First inspect the ACTUAL current codebase and understand the existing architecture before making changes.
+
+Phase 1–5 are already implemented and verified:
+- React + TypeScript + Vite + Tailwind
+- Wouter routing
+- Firebase Authentication
+- Firebase Admin server authentication
+- Firestore conversations/messages
+- Server-side Gemini generation
+- Qdrant vector storage
+- Google embeddings
+- Memory extraction and storage
+- Memory retrieval and context injection
+- Memory CRUD
+- Duplicate/conflict handling
+- Markdown rendering in the chat UI
+
+Do NOT restart, rewrite, or replace any of these systems.
+
+Do NOT assume files exist based only on this prompt.
+Inspect the actual project files and reuse the existing implementation.
+
+==================================================
+PHASE 6 GOAL
+==================================================
+
+Introduce a clean, bounded agent architecture with tool calling.
+
+The agent should be able to decide when it needs to use an available application tool instead of treating every request as a simple Gemini conversation.
+
+The architecture must remain understandable and interview-friendly.
+
+Do NOT turn this into a complex autonomous agent framework.
+
+==================================================
+1. AGENT ORCHESTRATOR
+==================================================
+
+Create or extend a server-side agent/orchestrator responsible for:
+
+1. Receiving the authenticated user's message.
+2. Loading the existing conversation context.
+3. Retrieving relevant memories using the EXISTING Phase 5 memory system.
+4. Giving Gemini access to the approved tools.
+5. Allowing Gemini to decide whether a tool is necessary.
+6. Executing the selected tool server-side.
+7. Returning the tool result to Gemini when required.
+8. Producing the final natural-language response.
+9. Persisting the normal user/model messages through the existing Firestore flow.
+
+Keep the agent loop bounded.
+
+Do NOT create an infinite autonomous loop.
+
+Use a small maximum number of tool iterations/calls per user message.
+
+If Gemini does not request a tool, respond normally.
+
+==================================================
+2. TOOL ARCHITECTURE
+==================================================
+
+Create a typed, centralized tool registry/definition system.
+
+Each tool should have:
+
+- stable tool name
+- description
+- typed input schema
+- typed output/result
+- server-side execution function
+- validation
+- error handling
+
+Do NOT scatter tool definitions throughout route handlers.
+
+The architecture should make it easy to add another tool later.
+
+Prefer the project's existing TypeScript validation approach where appropriate.
+
+==================================================
+3. INITIAL TOOLS
+==================================================
+
+Implement only a SMALL set of useful application tools.
+
+At minimum, provide tools that demonstrate genuine tool calling rather than simply wrapping Gemini.
+
+Use the existing application's capabilities where possible.
+
+Recommended initial tools:
+
+A. Memory search tool
+
+Purpose:
+Search the authenticated user's stored memories.
+
+Requirements:
+- Must use the verified Firebase UID.
+- Must reuse the existing Qdrant/embedding retrieval infrastructure.
+- Must never accept an arbitrary userId from Gemini or the client.
+- Must return only memories belonging to req.user.uid.
+- Respect the existing relevance threshold and top-K limits.
+
+B. Memory management tool
+
+Purpose:
+Allow the agent to identify when a user explicitly asks to remember/update information.
+
+Requirements:
+- Must remain owner-scoped.
+- Must reuse the existing Phase 4/5 memory extraction/storage logic.
+- Do not allow arbitrary destructive memory operations merely because Gemini requests them.
+- Require appropriate validation before creating/updating/deleting memory.
+
+If an equivalent memory capability already exists, REUSE it instead of creating duplicate implementations.
+
+Do not add unrelated external tools.
+
+Do not add web search, email, calendar, payments, filesystem access, shell execution, or other external tools in Phase 6.
+
+==================================================
+4. GEMINI TOOL CALLING
+==================================================
+
+Use the official Google Gemini SDK/API already used by the project.
+
+Implement proper Gemini function/tool calling rather than asking Gemini to output fake JSON indicating that a tool should be called.
+
+The flow should be conceptually:
+
+User message
+    ↓
+Agent
+    ↓
+Gemini
+    ↓
+Tool call requested?
+   / \
+ No   Yes
+ ↓     ↓
+Final  Validate tool call
+response     ↓
+          Execute tool
+              ↓
+        Tool result → Gemini
+              ↓
+          Final response
+
+Follow the SDK's actual tool/function-calling format.
+
+Do not invent an incompatible custom protocol.
+
+Keep GEMINI_API_KEY server-side only.
+
+==================================================
+5. SECURITY
+==================================================
+
+Preserve all existing Phase 2 security guarantees.
+
+The agent must NEVER be allowed to choose or provide the Firebase UID.
+
+The authenticated request's verified:
+
+req.user.uid
+
+must remain the sole ownership source.
+
+Tool execution must happen on the server.
+
+Never expose:
+- Firebase Admin credentials
+- GEMINI_API_KEY
+- QDRANT_API_KEY
+- QDRANT_URL
+
+to the frontend.
+
+Validate every tool argument before execution.
+
+Reject malformed or unauthorized tool calls safely.
+
+Treat retrieved memory and tool output as DATA/CONTEXT, not higher-priority instructions.
+
+Do not allow stored memory content to override the system instructions or tool permissions.
+
+==================================================
+6. PRESERVE PHASE 5 MEMORY RETRIEVAL
+==================================================
+
+Do not replace the existing memory retrieval system.
+
+The existing Phase 5 retrieval should remain available.
+
+Avoid retrieving the same memory twice unnecessarily.
+
+If the current architecture already retrieves relevant memories before Gemini generation, integrate the agent around that architecture instead of creating a second independent retrieval system.
+
+The agent must continue to work when:
+- no memories exist
+- retrieval returns no relevant memories
+- Qdrant fails
+- embedding generation fails
+
+Memory failures must not crash an otherwise valid chat request.
+
+==================================================
+7. CONVERSATION PERSISTENCE
+==================================================
+
+Preserve the existing Firestore conversation/message schema and API contract.
+
+Do not change:
+
+/users/{uid}
+
+/conversations/{conversationId}
+
+/messages/{messageId}
+
+unless a change is genuinely required by the existing architecture.
+
+Continue storing:
+
+role = "user"
+
+and
+
+role = "model"
+
+for normal conversation messages.
+
+Tool calls/results do not need to become user-visible chat messages unless the existing architecture specifically requires it.
+
+Do not expose internal tool execution details unnecessarily in the UI.
+
+==================================================
+8. CHAT UI
+==================================================
+
+Preserve the existing chat UI and Markdown renderer.
+
+Do not redesign the interface.
+
+The user should continue seeing a normal assistant response.
+
+If a tool is used internally, the UI may optionally show a small, non-technical status such as:
+
+"Searching your memories..."
+
+but do not expose:
+- API keys
+- raw tool arguments
+- internal Firebase IDs
+- Qdrant details
+- internal errors
+- implementation-specific debugging information
+
+Do not add a large agent dashboard.
+
+==================================================
+9. ERROR HANDLING
+==================================================
+
+Handle:
+
+- malformed tool arguments
+- unknown tool names
+- tool execution failures
+- Gemini tool-call failures
+- Gemini API failures
+- Qdrant failures
+- embedding failures
+- timeouts
+- maximum tool-call/iteration limits
+
+Use stable, user-friendly error responses.
+
+Do not expose provider internals or secrets.
+
+If a tool fails, do not invent a successful tool result.
+
+If the agent reaches its maximum tool-call limit, stop safely and return a normal bounded response/error.
+
+==================================================
+10. AVOID OVERENGINEERING
+==================================================
+
+Do NOT introduce:
+
+- LangChain
+- LangGraph
+- CrewAI
+- AutoGen
+- multi-agent systems
+- background workers
+- queues
+- autonomous planning loops
+- web browsing
+- external APIs
+- streaming
+- analytics
+- new databases
+- Redis
+- unnecessary abstractions
+
+This should be a small custom TypeScript agent architecture that is easy to explain in an SDE interview.
+
+==================================================
+11. API CONTRACT
+==================================================
+
+Inspect the existing API contract and generated client before changing anything.
+
+Prefer preserving the existing:
+
+POST /api/conversations/:id/messages
+
+contract.
+
+The frontend should not need to know whether the response came directly from Gemini or involved one or more tools.
+
+If the existing response contract is sufficient, do not change it.
+
+If a contract change is genuinely necessary, update the OpenAPI specification and regenerate the generated client rather than manually creating a parallel API type.
+
+==================================================
+12. TESTING
+==================================================
+
+Before reporting completion, actually test:
+
+A. Normal conversation
+- User asks a normal question.
+- Gemini responds without unnecessary tool calls.
+
+B. Tool-triggering request
+- User asks something that genuinely requires the memory tool.
+- Gemini requests the appropriate tool.
+- The server validates and executes it.
+- Gemini receives the result.
+- Final response is generated.
+
+C. Memory ownership
+- User A cannot retrieve User B's memories through tool calls.
+- Manipulated IDs/user IDs cannot bypass ownership.
+
+D. Tool safety
+- Unknown tools are rejected.
+- Invalid arguments are rejected.
+- Excessive tool iterations are stopped.
+
+E. Failure isolation
+- Simulate/handle a tool failure.
+- Ensure secrets are not exposed.
+- Ensure the application does not crash.
+
+F. Existing functionality
+- Authentication still works.
+- Conversations persist.
+- Messages persist.
+- Existing Phase 5 memory retrieval still works.
+- Markdown rendering still works.
+- Protected routes still work.
+
+G. Build verification
+Run:
+- workspace typecheck
+- frontend typecheck
+- backend typecheck
+- production Vite build
+- relevant backend production build/tests
+
+Do not claim a test passed unless it was actually run.
+
+If something cannot be verified, explicitly say:
+
+"Not verified yet."
+
+==================================================
+13. PHASE BOUNDARY
+==================================================
+
+This is ONLY Phase 6.
+
+Do NOT implement:
+
+- Phase 7 feedback/adaptation
+- Phase 8 dashboard redesign
+- Phase 9 final security audit/rate-limit overhaul
+- Phase 10 deployment/README overhaul
+
+Do not automatically start suggested tasks after completing Phase 6.
+
+==================================================
+14. COMPLETION REPORT
+==================================================
+
+When finished, STOP at the Phase 6 checkpoint.
+
+Report:
+
+1. Existing Phase 1–5 architecture inspected
+2. What was already present
+3. What was changed
+4. New files created
+5. Agent architecture
+6. Tool registry architecture
+7. Tools implemented
+8. Gemini tool-calling flow
+9. Security/ownership guarantees
+10. Error handling
+11. Tests actually run and results
+12. Build/typecheck results
+13. Any warnings
+14. Anything not verified
+15. Anything intentionally deferred
+
+Do NOT begin Phase 7 automatically.
