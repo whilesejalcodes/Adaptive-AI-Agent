@@ -19,8 +19,15 @@ import {
 } from "../lib/memory-storage";
 import { MemoryPipelineError, type MemoryDocument } from "../lib/memory-types";
 import { requireAuth } from "../middlewares/auth";
+import { createUserRateLimiter } from "../middlewares/rate-limit";
 
 const router: IRouter = Router();
+const memoryWriteRateLimiter = createUserRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 30,
+  maxConcurrent: 4,
+  message: "Too many memory changes. Please wait a moment and try again.",
+});
 
 function serializeMemory(memory: MemoryDocument) {
   return {
@@ -67,7 +74,7 @@ router.get("/memories", async (req, res) => {
   }
 });
 
-router.post("/memories", async (req, res) => {
+router.post("/memories", memoryWriteRateLimiter, async (req, res) => {
   const userId = req.user?.uid;
   if (!userId) {
     res.status(401).json({ error: "Authentication required." });
@@ -109,7 +116,7 @@ router.get("/memories/:memoryId", async (req, res) => {
   }
 });
 
-router.patch("/memories/:memoryId", async (req, res) => {
+router.patch("/memories/:memoryId", memoryWriteRateLimiter, async (req, res) => {
   const userId = req.user?.uid;
   const params = UpdateMemoryParams.safeParse(req.params);
   const body = UpdateMemoryBody.safeParse(req.body);

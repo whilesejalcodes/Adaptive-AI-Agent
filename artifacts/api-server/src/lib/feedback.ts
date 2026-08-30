@@ -25,6 +25,7 @@ type AdaptationDocument = ResponseAdaptation & {
 
 const feedback = firestore.collection("feedback");
 const adaptations = firestore.collection("adaptations");
+const MAX_FEEDBACK = 200;
 
 function feedbackDocumentId(userId: string, messageId: string): string {
   return `${encodeURIComponent(userId)}__${encodeURIComponent(messageId)}`;
@@ -61,10 +62,22 @@ export async function listConversationFeedback(
   userId: string,
   conversationId: string,
 ): Promise<FeedbackRecord[]> {
-  const snapshot = await feedback.where("conversationId", "==", conversationId).get();
+  const snapshot = await feedback
+    .where("conversationId", "==", conversationId)
+    .orderBy("updatedAt", "desc")
+    .limit(MAX_FEEDBACK)
+    .get()
+    .catch(async (error: unknown) => {
+      if (!(error instanceof Error) || !/requires an index|create composite index/i.test(error.message)) {
+        throw error;
+      }
+      return feedback.where("conversationId", "==", conversationId).get();
+    });
   return snapshot.docs
     .map((document) => feedbackFromData(document.id, document.data()))
-    .filter((record): record is FeedbackRecord => record?.userId === userId);
+    .filter((record): record is FeedbackRecord => record?.userId === userId)
+    .sort((left, right) => right.updatedAt.toMillis() - left.updatedAt.toMillis())
+    .slice(0, MAX_FEEDBACK);
 }
 
 export async function submitFeedback(input: {

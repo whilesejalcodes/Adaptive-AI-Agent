@@ -207,21 +207,21 @@ export function ChatPage() {
     query: {
       queryKey: getListConversationsQueryKey(),
       enabled: Boolean(user),
-      retry: false,
+        retry: 1,
     },
   });
   const messagesQuery = useListConversationMessages(selectedConversationId ?? '', {
     query: {
       queryKey: getListConversationMessagesQueryKey(selectedConversationId ?? ''),
       enabled: typeof selectedConversationId === 'string',
-      retry: false,
+        retry: 1,
     },
   });
   const feedbackQuery = useListConversationFeedback(selectedConversationId ?? '', {
     query: {
       queryKey: getListConversationFeedbackQueryKey(selectedConversationId ?? ''),
       enabled: typeof selectedConversationId === 'string',
-      retry: false,
+        retry: 1,
     },
   });
   const createConversationMutation = useCreateConversation();
@@ -346,6 +346,31 @@ export function ChatPage() {
     }
   }
 
+  async function retryChatQueries() {
+    try {
+      const results = await Promise.all([
+        ...(conversationsQuery.isError ? [conversationsQuery.refetch()] : []),
+        ...(messagesQuery.isError ? [messagesQuery.refetch()] : []),
+      ]);
+      if (results.some((result) => result.isError)) {
+        setNotice('The conversation is still unavailable. Please try again in a moment.');
+      }
+    } catch {
+      setNotice('The conversation is still unavailable. Please try again in a moment.');
+    }
+  }
+
+  async function retryFeedback() {
+    try {
+      const result = await feedbackQuery.refetch();
+      if (result.isError) {
+        setNotice('Feedback is still unavailable. Please try again in a moment.');
+      }
+    } catch {
+      setNotice('Feedback is still unavailable. Please try again in a moment.');
+    }
+  }
+
   async function handleFeedback(messageId: string, rating: Feedback['rating']) {
     const conversationId = selectedConversationId;
     if (!conversationId || feedbackPendingMessageId) return;
@@ -438,12 +463,12 @@ export function ChatPage() {
           {notice && <div className="notice" role="status" data-testid="status-chat-notice"><Sparkles size={15} /><span>{notice}</span><button className="icon-btn ml-auto" type="button" onClick={() => setNotice('')} aria-label="Dismiss notice" data-testid="button-dismiss-chat-notice"><X size={14} /></button></div>}
           {(conversationsQuery.isError || messagesQuery.isError) && (
             <div className="notice border-[hsl(var(--destructive)/.35)] text-[hsl(var(--destructive))]" role="alert" data-testid="status-chat-error">
-              <Sparkles size={15} /><span>We could not load this conversation. Sign in again if your session has expired.</span>
+              <Sparkles size={15} /><span>We could not load this conversation. Sign in again if your session has expired.</span><button className="btn btn-link btn-small ml-auto" type="button" onClick={retryChatQueries} data-testid="button-retry-chat">Retry</button>
             </div>
           )}
           {feedbackQuery.isError && (
             <div className="notice border-[hsl(var(--destructive)/.35)] text-[hsl(var(--destructive))]" role="alert" data-testid="status-feedback-load-error">
-              <Sparkles size={15} /><span>Feedback could not be loaded. You can try again later.</span>
+              <Sparkles size={15} /><span>Feedback could not be loaded. You can try again later.</span><button className="btn btn-link btn-small ml-auto" type="button" onClick={retryFeedback} data-testid="button-retry-feedback">Retry</button>
             </div>
           )}
           {messages.length === 0 && !isThinking ? (

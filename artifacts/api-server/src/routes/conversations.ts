@@ -33,10 +33,19 @@ import {
 import { MemoryPipelineError } from "../lib/memory-types";
 import { getResponseAdaptation } from "../lib/feedback";
 import { requireAuth } from "../middlewares/auth";
+import { createUserRateLimiter } from "../middlewares/rate-limit";
 
 const router: IRouter = Router();
 const conversations = firestore.collection("conversations");
 const messages = firestore.collection("messages");
+const MAX_CONVERSATIONS = 200;
+const MAX_CONVERSATION_MESSAGES = 200;
+const messageRateLimiter = createUserRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 12,
+  maxConcurrent: 2,
+  message: "Too many assistant requests. Please wait a moment and try again.",
+});
 
 type ConversationDocument = {
   id: string;
@@ -134,6 +143,89 @@ function serializeMessage(document: MessageDocument) {
   };
 }
 
+function safeErrorKind(error: unknown): string {
+  return error instanceof Error ? error.name : typeof error;
+}
+
+function isMissingIndexError(error: unknown): boolean {
+  return error instanceof Error && /requires an index|create composite index/i.test(error.message);
+}
+
+let orderedMessageQueryAvailable: boolean | undefined;
+let orderedConversationQueryAvailable: boolean | undefined;
+
+async function getOwnedConversationMessages(
+  conversationId: string,
+  userId: string,
+  limit: number,
+): Promise<MessageDocument[]> {
+  if (orderedMessageQueryAvailable !== false) {
+    try {
+      const snapshot = await messages
+        .where("conversationId", "==", conversationId)
+        .orderBy("timestamp", "desc")
+        .limit(limit)
+        .get();
+      orderedMessageQueryAvailable = true;
+      return snapshot.docs
+        .map((document) => {
+          try {
+            return messageFromSnapshot(document);
+          } catch {
+            return null;
+          }
+        })
+        .filter((message): message is MessageDocument =>
+          message !== null && message.userId === userId)
+        .sort((left, right) => left.timestamp.toMillis() - right.timestamp.toMillis());
+    } catch (error) {
+      if (!isMissingIndexError(error)) throw error;
+      orderedMessageQueryAvailable = false;
+    }
+  }
+
+  const snapshot = await messages
+    .where("conversationId", "==", conversationId)
+    .get();
+  return snapshot.docs
+    .map((document) => {
+      try {
+        return messageFromSnapshot(document);
+      } catch {
+        return null;
+      }
+    })
+    .filter((message): message is MessageDocument =>
+      message !== null && message.userId === userId)
+    .sort((left, right) => left.timestamp.toMillis() - right.timestamp.toMillis())
+    .slice(-limit);
+}
+
+async function getOwnedConversations(userId: string): Promise<ConversationDocument[]> {
+  if (orderedConversationQueryAvailable !== false) {
+    try {
+      const snapshot = await conversations
+        .where("userId", "==", userId)
+        .orderBy("updatedAt", "desc")
+        .limit(MAX_CONVERSATIONS)
+        .get();
+      orderedConversationQueryAvailable = true;
+      return snapshot.docs
+        .map((document) => conversationFromSnapshot(document))
+        .sort((left, right) => right.updatedAt.toMillis() - left.updatedAt.toMillis());
+    } catch (error) {
+      if (!isMissingIndexError(error)) throw error;
+      orderedConversationQueryAvailable = false;
+    }
+  }
+
+  const snapshot = await conversations.where("userId", "==", userId).get();
+  return snapshot.docs
+    .map((document) => conversationFromSnapshot(document))
+    .sort((left, right) => right.updatedAt.toMillis() - left.updatedAt.toMillis())
+    .slice(0, MAX_CONVERSATIONS);
+}
+
 async function findOwnedConversation(
   conversationId: string,
   userId: string,
@@ -155,14 +247,11 @@ router.get("/conversations", async (req, res) => {
   }
 
   try {
-    const snapshot = await conversations.where("userId", "==", userId).get();
-    const data = snapshot.docs
-      .map((document) => conversationFromSnapshot(document))
-      .sort((left, right) => right.updatedAt.toMillis() - left.updatedAt.toMillis())
+    const data = (await getOwnedConversations(userId))
       .map(serializeConversation);
     res.json(ListConversationsResponse.parse(data));
   } catch (error) {
-    req.log.error({ error }, "Failed to list conversations");
+    req.log.error({ kind: safeErrorKind(error) }, "Failed to list conversations");
     res.status(500).json({ error: "Unable to load conversations." });
   }
 });
@@ -183,10 +272,16 @@ router.post("/conversations", async (req, res) => {
   try {
     const now = Timestamp.now();
     const reference = conversations.doc();
+    const title = parsed.data.title.trim();
+    if (!title) {
+      res.status(400).json({ error: "Conversation title is required." });
+      return;
+    }
+
     const document: ConversationDocument = {
       id: reference.id,
       userId,
-      title: parsed.data.title.trim(),
+      title,
       createdAt: now,
       updatedAt: now,
     };
@@ -196,7 +291,7 @@ router.post("/conversations", async (req, res) => {
       CreateConversationResponse.parse(serializeConversation(document)),
     );
   } catch {
-    req.log.error("Failed to create conversation");
+    req.log.error({ kind: "unknown" }, "Failed to create conversation");
     res.status(500).json({ error: "Unable to create conversation." });
   }
 });
@@ -239,8 +334,8 @@ router.patch("/conversations/:conversationId", async (req, res) => {
         }),
       ),
     );
-  } catch {
-    req.log.error("Failed to update conversation");
+  } catch (error) {
+    req.log.error({ kind: safeErrorKind(error) }, "Failed to update conversation");
     res.status(500).json({ error: "Unable to update conversation." });
   }
 });
@@ -270,21 +365,19 @@ router.get("/conversations/:conversationId/messages", async (req, res) => {
       return;
     }
 
-    const snapshot = await messages
-      .where("conversationId", "==", parsedParams.data.conversationId)
-      .get();
-    const data = snapshot.docs
-      .map((document) => messageFromSnapshot(document))
-      .sort((left, right) => left.timestamp.toMillis() - right.timestamp.toMillis())
-      .map(serializeMessage);
+    const data = (await getOwnedConversationMessages(
+      parsedParams.data.conversationId,
+      userId,
+      MAX_CONVERSATION_MESSAGES,
+    )).map(serializeMessage);
     res.json(ListConversationMessagesResponse.parse(data));
-  } catch {
-    req.log.error("Failed to list conversation messages");
+  } catch (error) {
+    req.log.error({ kind: safeErrorKind(error) }, "Failed to list conversation messages");
     res.status(500).json({ error: "Unable to load messages." });
   }
 });
 
-router.post("/conversations/:conversationId/messages", async (req, res) => {
+router.post("/conversations/:conversationId/messages", messageRateLimiter, async (req, res) => {
   const userId = req.user?.uid;
   if (!userId) {
     res.status(401).json({ error: "Authentication required." });
@@ -328,15 +421,11 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
       timestamp: now,
     };
 
-    await userMessageReference.set(userMessage);
-
-    const historySnapshot = await messages
-      .where("conversationId", "==", parsedParams.data.conversationId)
-      .limit(GEMINI_HISTORY_LIMIT)
-      .get();
-    const historyDocuments = historySnapshot.docs
-      .map((document) => messageFromSnapshot(document))
-      .filter((message) => message.id !== userMessage.id);
+    const historyDocuments = await getOwnedConversationMessages(
+      parsedParams.data.conversationId,
+      userId,
+      GEMINI_HISTORY_LIMIT,
+    );
     historyDocuments.push(userMessage);
     const history: GeminiConversationMessage[] = historyDocuments
       .sort((left, right) => left.timestamp.toMillis() - right.timestamp.toMillis())
@@ -367,7 +456,10 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
     try {
       adaptation = await getResponseAdaptation(userId);
     } catch (error) {
-      req.log.warn({ error }, "Response adaptation unavailable; continuing with default style");
+      req.log.warn(
+        { kind: safeErrorKind(error) },
+        "Response adaptation unavailable; continuing with default style",
+      );
     }
     const agentResult = await runAdaptiveAgent({
       userId,
@@ -391,6 +483,7 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
     };
 
     const batch = firestore.batch();
+    batch.set(userMessageReference, userMessage);
     batch.set(assistantMessageReference, assistantMessage);
     batch.update(conversation.ref, { updatedAt: assistantMessage.timestamp });
     await batch.commit();
@@ -456,7 +549,7 @@ router.post("/conversations/:conversationId/messages", async (req, res) => {
       return;
     }
 
-    req.log.error("Failed to store conversation messages");
+    req.log.error({ kind: safeErrorKind(error) }, "Failed to store conversation messages");
     res.status(500).json({ error: "Unable to save the message." });
   }
 });

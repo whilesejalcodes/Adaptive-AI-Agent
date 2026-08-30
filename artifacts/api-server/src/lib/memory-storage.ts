@@ -22,6 +22,7 @@ import {
 } from "./qdrant";
 
 const memories = firestore.collection("memories");
+const MAX_MEMORIES = 200;
 
 function stableHash(parts: string[]): string {
   return createHash("sha256").update(parts.join("\u0000")).digest("hex");
@@ -78,11 +79,26 @@ function memoryFromSnapshot(
 }
 
 export async function listOwnedMemories(userId: string): Promise<MemoryDocument[]> {
-  const snapshot = await memories.where("userId", "==", userId).get();
-  return snapshot.docs
-    .map(memoryFromSnapshot)
-    .filter((memory): memory is MemoryDocument => memory !== null)
-    .sort((left, right) => right.updatedAt.toMillis() - left.updatedAt.toMillis());
+  try {
+    const snapshot = await memories
+      .where("userId", "==", userId)
+      .orderBy("updatedAt", "desc")
+      .limit(MAX_MEMORIES)
+      .get();
+    return snapshot.docs
+      .map(memoryFromSnapshot)
+      .filter((memory): memory is MemoryDocument => memory !== null);
+  } catch (error) {
+    if (!(error instanceof Error) || !/requires an index|create composite index/i.test(error.message)) {
+      throw error;
+    }
+    const snapshot = await memories.where("userId", "==", userId).get();
+    return snapshot.docs
+      .map(memoryFromSnapshot)
+      .filter((memory): memory is MemoryDocument => memory !== null)
+      .sort((left, right) => right.updatedAt.toMillis() - left.updatedAt.toMillis())
+      .slice(0, MAX_MEMORIES);
+  }
 }
 
 export async function getOwnedMemory(
@@ -101,6 +117,7 @@ async function writeIndexedMemory(
   reference: FirebaseFirestore.DocumentReference,
   document: MemoryDocument,
 ): Promise<MemoryDocument> {
+  let vectorWritten = false;
   try {
     const embedding = await generateMemoryEmbedding(document.text, document.type);
     await ensureMemoryCollection(embedding.dimension);
@@ -117,6 +134,7 @@ async function writeIndexedMemory(
         createdAt: document.createdAt.toDate().toISOString(),
       },
     });
+    vectorWritten = true;
     const updatedAt = Timestamp.now();
     await reference.update({
       vectorStatus: "indexed",
@@ -127,6 +145,9 @@ async function writeIndexedMemory(
     });
     return { ...document, vectorStatus: "indexed", embeddingModel: embedding.model, embeddingDimension: embedding.dimension, updatedAt };
   } catch (error) {
+    if (vectorWritten) {
+      await deleteMemoryVector(document.id).catch(() => undefined);
+    }
     try {
       await reference.update({
         vectorStatus: "failed",
@@ -271,28 +292,7 @@ export async function createMemoriesForInteraction(input: {
     }
 
     try {
-      const embedding = await generateMemoryEmbedding(memory.text, memory.type);
-      await ensureMemoryCollection(embedding.dimension);
-      await upsertMemoryVector({
-        pointId: getMemoryPointId(memoryId),
-        vector: embedding.vector,
-        payload: {
-          memoryId,
-          userId: input.userId,
-          type: memory.type,
-          text: memory.text,
-          sourceConversationId: input.conversationId,
-          sourceMessageId: input.userMessageId,
-          createdAt: document.createdAt.toDate().toISOString(),
-        },
-      });
-      await reference.update({
-        vectorStatus: "indexed",
-        embeddingModel: embedding.model,
-        embeddingDimension: embedding.dimension,
-        indexingError: null,
-        updatedAt: Timestamp.now(),
-      });
+      await writeIndexedMemory(reference, document);
       result.indexed += 1;
     } catch (error) {
       result.failed += 1;

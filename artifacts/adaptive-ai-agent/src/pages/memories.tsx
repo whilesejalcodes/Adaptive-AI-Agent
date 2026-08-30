@@ -151,7 +151,7 @@ export function MemoriesPage() {
     query: {
       queryKey: getListMemoriesQueryKey(),
       enabled: Boolean(user),
-      retry: false,
+        retry: 1,
     },
   });
   const createMutation = useCreateMemory();
@@ -184,7 +184,14 @@ export function MemoriesPage() {
   }
 
   async function refreshMemories() {
-    await memoriesQuery.refetch();
+    try {
+      const result = await memoriesQuery.refetch();
+      if (result.isError) {
+        setNotice({ tone: 'error', text: 'Memories could not be refreshed. Please try again.' });
+      }
+    } catch {
+      setNotice({ tone: 'error', text: 'Memories could not be refreshed. Please try again.' });
+    }
   }
 
   async function saveEdit(id: string, text: string, type: MemoryType) {
@@ -272,7 +279,7 @@ export function MemoriesPage() {
           <span className="memory-result-count" data-testid="text-memory-count"><strong>{filtered.length.toString().padStart(2, '0')}</strong> of {memories.length} shown</span>
           <button className="btn btn-ghost btn-small memory-refresh" type="button" onClick={refreshMemories} disabled={memoriesQuery.isFetching} data-testid="button-refresh-memories"><RefreshCw size={13} className={memoriesQuery.isFetching ? 'refreshing' : ''} /> {memoriesQuery.isFetching ? 'Refreshing' : 'Refresh'}</button>
         </div>
-        {memoriesQuery.isError && <div className="card memory-empty" role="alert" data-testid="error-memories"><Brain size={25} /><h2>Memories could not be loaded.</h2><p>Check your connection or sign in again, then retry.</p><button className="btn btn-ghost btn-small mx-auto mt-4" type="button" onClick={() => memoriesQuery.refetch()} data-testid="button-retry-memories">Retry</button></div>}
+         {memoriesQuery.isError && <div className="card memory-empty" role="alert" data-testid="error-memories"><Brain size={25} /><h2>Memories could not be loaded.</h2><p>Check your connection or sign in again, then retry.</p><button className="btn btn-ghost btn-small mx-auto mt-4" type="button" onClick={refreshMemories} data-testid="button-retry-memories">Retry</button></div>}
         {!memoriesQuery.isError && (
           <div className="memory-grid">
             {memoriesQuery.isLoading ? <MemoryLoadingState /> : filtered.length === 0 ? <div className="card memory-empty" data-testid="empty-memories"><Brain size={25} /><h2>{query ? 'No memories match that search.' : 'No memories yet.'}</h2><p>{query ? 'Try a wider phrase or category.' : 'Useful preferences, goals, and facts from conversations will appear here.'}</p>{query && <button className="btn btn-ghost btn-small mx-auto mt-4" type="button" onClick={() => setQuery('')} data-testid="button-clear-empty-memory-search">Clear search</button>}</div> : filtered.map((memory) => (

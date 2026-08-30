@@ -13,10 +13,21 @@ import {
   submitFeedback,
 } from "../lib/feedback";
 import { requireAuth } from "../middlewares/auth";
+import { createUserRateLimiter } from "../middlewares/rate-limit";
 
 const router: IRouter = Router();
 const conversations = firestore.collection("conversations");
 const messages = firestore.collection("messages");
+const feedbackRateLimiter = createUserRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 60,
+  maxConcurrent: 6,
+  message: "Too many feedback updates. Please wait a moment and try again.",
+});
+
+function safeErrorKind(error: unknown): string {
+  return error instanceof Error ? error.name : typeof error;
+}
 
 function serializeFeedback(record: {
   id: string;
@@ -61,13 +72,14 @@ router.get("/conversations/:conversationId/feedback", async (req, res) => {
       .map(serializeFeedback);
     res.json(ListConversationFeedbackResponse.parse(data));
   } catch (error) {
-    req.log.error({ error }, "Failed to list conversation feedback");
+    req.log.error({ kind: safeErrorKind(error) }, "Failed to list conversation feedback");
     res.status(500).json({ error: "Unable to load feedback." });
   }
 });
 
 router.post(
   "/conversations/:conversationId/messages/:messageId/feedback",
+  feedbackRateLimiter,
   async (req, res) => {
     const userId = req.user?.uid;
     const parsedParams = SubmitMessageFeedbackParams.safeParse(req.params);
@@ -108,7 +120,7 @@ router.post(
       });
       res.status(201).json(SubmitMessageFeedbackResponse.parse(serializeFeedback(record)));
     } catch (error) {
-      req.log.error({ error }, "Failed to save message feedback");
+      req.log.error({ kind: safeErrorKind(error) }, "Failed to save message feedback");
       res.status(500).json({ error: "Unable to save feedback." });
     }
   },

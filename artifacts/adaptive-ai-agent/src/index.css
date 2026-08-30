@@ -99,6 +99,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .mobile-history-empty { margin: 0; padding: 11px 10px; color: hsl(var(--sidebar-foreground) / .52); font-size: 11px; line-height: 1.5; }
 .mobile-history-return { display: flex; align-items: center; gap: 5px; margin-top: 11px; padding: 4px 0; border: 0; color: hsl(var(--sidebar-primary)); background: transparent; font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: .07em; cursor: pointer; }
 .mobile-drawer-signout { margin-top: auto; border-top: 1px solid hsl(var(--sidebar-border)); border-radius: 0; padding-top: 17px; color: hsl(var(--sidebar-foreground) / .7); }
+.workspace-action-error { margin-top: 9px; color: hsl(var(--destructive)); font-size: 10px; line-height: 1.4; }
 .topbar { display: flex; justify-content: space-between; align-items: center; min-height: 48px; padding: 21px 42px 0; max-width: 1244px; margin: 0 auto; }
 .connection { display: flex; align-items: center; gap: 8px; color: hsl(var(--muted-foreground)); font-size: 12px; }
 .connection-dot { width: 7px; height: 7px; border-radius: 50%; background: hsl(var(--muted-foreground)); }

@@ -6,6 +6,7 @@ const COLLECTION_NAME = "user_memories";
 const QDRANT_TIMEOUT_MS = 8_000;
 
 let qdrantClient: QdrantClient | undefined;
+let qdrantClientConfigKey: string | undefined;
 
 function stableHash(parts: string[]): string {
   return createHash("sha256").update(parts.join("\u0000")).digest("hex");
@@ -22,12 +23,16 @@ function getQdrantConfig(): { url: string; apiKey: string } {
 
 function getQdrantClient(): QdrantClient {
   const { url, apiKey } = getQdrantConfig();
-  qdrantClient ??= new QdrantClient({
-    url,
-    apiKey,
-    checkCompatibility: true,
-    timeout: QDRANT_TIMEOUT_MS,
-  });
+  const configKey = `${url}\u0000${apiKey}`;
+  if (!qdrantClient || qdrantClientConfigKey !== configKey) {
+    qdrantClient = new QdrantClient({
+      url,
+      apiKey,
+      checkCompatibility: true,
+      timeout: QDRANT_TIMEOUT_MS,
+    });
+    qdrantClientConfigKey = configKey;
+  }
   return qdrantClient;
 }
 

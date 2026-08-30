@@ -39,7 +39,7 @@ function getAuthErrorMessage(error: unknown, mode: 'login' | 'signup'): string {
     case 'auth/email-already-in-use':
       return 'An account already exists for this email. Try signing in instead.';
     case 'auth/weak-password':
-      return 'Choose a stronger password with at least 6 characters.';
+      return 'Choose a stronger password with at least 8 characters.';
     case 'auth/network-request-failed':
       return 'We could not reach Firebase. Check your connection and try again.';
     case 'auth/too-many-requests':
@@ -69,17 +69,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let unsubscribe = () => {};
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
     persistenceReady
-      .catch(() => undefined)
+      .catch(() => {
+        if (active) {
+          console.warn('Local auth persistence is unavailable; continuing with session authentication.');
+        }
+      })
       .finally(() => {
-        unsubscribe = onAuthStateChanged(firebaseAuth, (nextUser) => {
+        if (!active) return;
+        const listener = onAuthStateChanged(firebaseAuth, (nextUser) => {
           setUser(nextUser);
           setLoading(false);
         });
+        if (active) {
+          unsubscribe = listener;
+        } else {
+          listener();
+        }
       });
 
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(() => ({

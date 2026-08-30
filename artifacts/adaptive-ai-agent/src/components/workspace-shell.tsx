@@ -59,6 +59,7 @@ export function WorkspaceShell({ children, mobilePanel }: WorkspaceShellProps) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const displayName = user?.displayName || user?.email || 'Your workspace';
   const initials = displayName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
@@ -77,8 +78,13 @@ export function WorkspaceShell({ children, mobilePanel }: WorkspaceShellProps) {
 
   async function handleLogout() {
     setMobileMenuOpen(false);
-    await logout();
-    setLocation('/login');
+    setLogoutError('');
+    try {
+      await logout();
+      setLocation('/login');
+    } catch {
+      setLogoutError('Sign out could not be completed. Please try again.');
+    }
   }
 
   function closeMobileMenu() {
@@ -118,6 +124,7 @@ export function WorkspaceShell({ children, mobilePanel }: WorkspaceShellProps) {
             </div>
              <button className="icon-btn ml-auto opacity-60 hover:opacity-100" type="button" onClick={handleLogout} aria-label="Sign out" data-testid="button-logout"><LogOut size={15} /></button>
           </div>
+           {logoutError && <div className="workspace-action-error" role="alert">{logoutError}</div>}
         </div>
       </aside>
       <div className="workspace-main">
@@ -171,6 +178,7 @@ export function WorkspaceShell({ children, mobilePanel }: WorkspaceShellProps) {
                 <LogOut size={17} strokeWidth={1.8} />
                 <span className="nav-label">Sign out</span>
               </button>
+              {logoutError && <div className="workspace-action-error" role="alert">{logoutError}</div>}
             </aside>
           </div>
         )}

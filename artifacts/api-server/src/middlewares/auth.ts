@@ -9,13 +9,14 @@ export async function requireAuth(
   const authorization = req.header("authorization");
   const match = authorization?.match(/^Bearer\s+(.+)$/i);
 
-  if (!match) {
+  const token = match?.[1].trim();
+  if (!token || token.length > 8_192) {
     res.status(401).json({ error: "Authentication required." });
     return;
   }
 
   try {
-    req.user = await firebaseAuth.verifyIdToken(match[1]);
+    req.user = await firebaseAuth.verifyIdToken(token, true);
     next();
   } catch {
     req.log.warn("Rejected invalid Firebase ID token");

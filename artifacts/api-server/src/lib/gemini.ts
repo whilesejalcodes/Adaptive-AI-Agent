@@ -17,6 +17,7 @@ const SYSTEM_INSTRUCTION =
   "do not claim access to information that is not present in the conversation.";
 
 let geminiClient: GoogleGenAI | undefined;
+let geminiClientApiKey: string | undefined;
 
 export type GeminiConversationMessage = {
   role: "user" | "model";
@@ -56,7 +57,10 @@ export function getGeminiClient(): GoogleGenAI {
   if (!apiKey) {
     throw new GeminiGenerationError("configuration");
   }
-  geminiClient ??= new GoogleGenAI({ apiKey });
+  if (!geminiClient || geminiClientApiKey !== apiKey) {
+    geminiClient = new GoogleGenAI({ apiKey });
+    geminiClientApiKey = apiKey;
+  }
   return geminiClient;
 }
 

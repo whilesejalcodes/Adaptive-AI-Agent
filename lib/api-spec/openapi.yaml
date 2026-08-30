@@ -192,6 +192,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Assistant request rate limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "502":
           description: Gemini provider failure
           content:
@@ -265,6 +271,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Memory write rate limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /memories/{memoryId}:
     get:
       operationId: getMemory
@@ -330,6 +342,12 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "503":
           description: Memory provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Memory write rate limit reached
           content:
             application/json:
               schema:
@@ -430,6 +448,12 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Owned assistant message not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Feedback rate limit reached
           content:
             application/json:
               schema:

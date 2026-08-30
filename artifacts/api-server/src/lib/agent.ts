@@ -71,28 +71,27 @@ export async function runAdaptiveAgent(input: AdaptiveAgentInput): Promise<Adapt
       throw new AgentOrchestrationError();
     }
     toolCallsUsed += turn.functionCalls.length;
-    const functionResponses = await Promise.all(
-      turn.functionCalls.map(async (functionCall) => {
-        if (!functionCall.name) {
-          throw new AgentOrchestrationError("invalid-tool-call");
-        }
-        const response = await executeAgentToolCall(
-          functionCall.name,
-          functionCall.args,
-          toolContext,
-        );
-        if (functionCall.name === "memory_manage" && "output" in response) {
-          memoryManaged = true;
-        }
-        return {
-          functionResponse: {
-            id: functionCall.id,
-            name: functionCall.name,
-            response,
-          },
-        };
-      }),
-    );
+    const functionResponses = [];
+    for (const functionCall of turn.functionCalls) {
+      if (!functionCall.name) {
+        throw new AgentOrchestrationError("invalid-tool-call");
+      }
+      const response = await executeAgentToolCall(
+        functionCall.name,
+        functionCall.args,
+        toolContext,
+      );
+      if (functionCall.name === "memory_manage" && "output" in response) {
+        memoryManaged = true;
+      }
+      functionResponses.push({
+        functionResponse: {
+          id: functionCall.id,
+          name: functionCall.name,
+          response,
+        },
+      });
+    }
     contents = [
       ...contents,
       turn.modelContent,

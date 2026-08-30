@@ -24,6 +24,10 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
     const email = String(form.get('email') ?? '');
     const password = String(form.get('password') ?? '');
     setError('');
+    if (isSignup && password.length < 8) {
+      setError('Choose a password with at least 8 characters.');
+      return;
+    }
     setSubmitting(true);
     try {
       if (isSignup) {

@@ -7,4 +7,4 @@ Treat the conversation/timestamp composite index as declared but not guaranteed 
 
 **Why:** The ordered conversation-history query required the composite index, and the server credential was not permitted to create that index.
 
-**How to apply:** Keep runtime queries compatible with available indexes unless deployment is explicitly arranged. If newest-first history becomes required, deploy the declared index through an authorized Firebase workflow before relying on it.
+**How to apply:** Attempt bounded newest-first reads, detect missing-index errors, then fall back to owner-filtered reads sorted and capped in application code. Do not make index deployment a runtime prerequisite.

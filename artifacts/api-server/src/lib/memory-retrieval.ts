@@ -152,7 +152,7 @@ export function formatMemoryContext(memories: RetrievedMemory[]): string | undef
   const lines: string[] = [];
   let length = 0;
   for (const memory of memories) {
-    const line = `- ${memory.text}`;
+    const line = `- ${JSON.stringify({ type: memory.type, text: memory.text })}`;
     if (length + line.length + 1 > MAX_CONTEXT_LENGTH) break;
     lines.push(line);
     length += line.length + 1;

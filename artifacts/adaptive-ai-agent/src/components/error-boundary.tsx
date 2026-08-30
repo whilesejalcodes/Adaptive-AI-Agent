@@ -75,11 +75,7 @@ export class ErrorBoundary extends Component<
   }
 
   componentDidCatch(error: unknown, info: ErrorInfo): void {
-    console.error(
-      'ErrorBoundary caught an error:',
-      toError(error),
-      info.componentStack,
-    );
+    console.error('ErrorBoundary caught a rendering error.', info.componentStack);
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps): void {
