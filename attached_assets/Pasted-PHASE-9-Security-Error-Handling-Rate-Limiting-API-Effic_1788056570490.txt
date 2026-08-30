@@ -1,0 +1,223 @@
+PHASE 9 — Security, Error Handling, Rate Limiting, API Efficiency & Testing
+
+This is a final reliability and security hardening phase for the completed Phase 1–8 application.
+
+First, perform a read-only audit of the existing implementation across authentication, conversations, Gemini, agent/tool calling, memory retrieval/storage, Qdrant, feedback/adaptation, conversation titles, and the responsive frontend.
+
+Do NOT rewrite working architecture or introduce new frameworks. Identify concrete security, reliability, performance, API-efficiency, or testing issues and fix only issues that are actually necessary.
+
+IMPORTANT:
+- Preserve all existing Phase 1–8 functionality.
+- Do not change the product architecture unnecessarily.
+- Do not replace Firebase, Gemini, Qdrant, or the existing generated API architecture.
+- Do not start any new product phase or feature.
+- Do not redesign the UI.
+- Do not add unnecessary dependencies.
+- Do not expose secrets, tokens, provider credentials, internal errors, tool arguments, or stack traces to clients.
+- Never trust user-provided Firebase UIDs, conversation IDs, message IDs, memory IDs, or feedback IDs for authorization; ownership must always come from the verified Firebase UID.
+- Keep the existing public API response contracts compatible unless a security/error fix genuinely requires a change.
+
+## 1. Security audit and fixes
+
+Audit and fix concrete vulnerabilities involving:
+
+- Firebase authentication and server-side token verification
+- Conversation ownership
+- Message ownership
+- Memory ownership
+- Qdrant user filtering
+- Feedback ownership
+- Conversation-title update authorization
+- Manipulated IDs and cross-user resource access
+- User-provided userId/UID injection
+- Mass-assignment or unsafe request-body fields
+- Missing or weak input validation
+- Tool/function-call argument validation
+- Prompt injection through stored memories or tool results
+- Gemini/API secret exposure
+- Frontend bundle exposure of server-only secrets
+- Sensitive information appearing in logs
+- Unsafe error messages
+- CORS or other API boundary issues if applicable
+
+Use the existing Zod/OpenAPI validation and Firebase ownership patterns wherever possible.
+
+Do not weaken any existing ownership checks.
+
+## 2. Error handling
+
+Audit all major server and client paths for predictable failure behavior.
+
+Ensure:
+
+- Invalid requests return appropriate stable errors.
+- Unauthenticated requests return 401.
+- Unauthorized/non-owned resources do not leak whether another user's resource exists.
+- Missing resources return appropriate safe errors.
+- Gemini failures are handled without exposing provider details.
+- Qdrant failures do not unnecessarily destroy successful chat behavior.
+- Embedding failures are isolated appropriately.
+- Memory-storage failures do not incorrectly make a successful chat response fail.
+- Tool failures are handled safely.
+- Feedback failures do not break chat.
+- Firestore failures produce safe user-facing errors.
+- Timeouts and unexpected exceptions are handled consistently.
+- Browser-visible errors remain understandable and non-sensitive.
+- Server logs contain useful diagnostic information without secrets or tokens.
+
+Avoid fake fallback AI responses. Do not silently pretend an operation succeeded when it failed.
+
+## 3. Rate-limit handling
+
+Inspect the current API for abuse-sensitive operations, especially:
+
+- Gemini generation
+- Agent/tool execution
+- Memory retrieval
+- Memory creation/update
+- Feedback submission
+- Authentication-sensitive API paths where appropriate
+
+If rate limiting is currently missing and the Phase 9 architecture requires it, implement a small, server-side rate-limit mechanism appropriate for this application.
+
+Prefer a simple bounded implementation over introducing Redis, queues, workers, or another infrastructure dependency.
+
+Rate limits must not be based on a user-supplied UID.
+
+Use the verified Firebase UID and/or trusted request information.
+
+Return a stable 429 response when a limit is exceeded, without exposing internal implementation details.
+
+Avoid adding rate limits so aggressive that normal development/testing becomes unusable.
+
+## 4. API efficiency
+
+Audit for unnecessary API/provider/database work.
+
+Specifically check for:
+
+- Duplicate Gemini calls
+- Duplicate embedding calls
+- Duplicate Qdrant searches
+- Unnecessary Firestore reads/writes
+- Repeated memory retrieval within one request
+- Excessive conversation history sent to Gemini
+- Unbounded tool iterations
+- Unbounded memory/tool results
+- Redundant feedback requests
+- Redundant API requests caused by frontend state/query behavior
+
+Preserve the existing bounded retrieval, embedding, and agent iteration behavior.
+
+Do not optimize by removing security validation or ownership checks.
+
+Do not introduce premature caching or complex infrastructure unless clearly necessary.
+
+## 5. Testing
+
+Create or run practical tests for the important security and reliability boundaries.
+
+At minimum verify:
+
+### Authentication
+- Missing Firebase token → 401
+- Invalid token → safe rejection
+- Valid authenticated request → works
+
+### Ownership
+- User A cannot read User B's conversations
+- User A cannot access User B's messages
+- User A cannot access User B's memories
+- User A cannot modify/delete User B's memories
+- User A cannot submit/modify User B's feedback
+- User A cannot rename User B's conversation
+- Manipulated IDs cannot bypass ownership
+
+### Input validation
+- Malformed request bodies
+- Empty/oversized strings
+- Invalid IDs
+- Invalid feedback values
+- Malformed tool arguments
+- Attempted userId/UID injection
+- Unknown tool names
+
+### AI/provider failures
+- Gemini failure
+- Embedding failure
+- Qdrant failure
+- Tool failure
+- Timeout/error paths
+
+Verify that failures do not leak secrets or internal provider information.
+
+### Rate limiting
+- Normal requests succeed
+- Excessive requests produce 429
+- Rate-limit state cannot be bypassed using a fake userId
+
+### API efficiency
+Verify that bounded requests do not accidentally trigger duplicate Gemini, embedding, Qdrant, or Firestore operations.
+
+### Regression
+Re-run representative flows from Phase 1–8:
+
+- Signup/login/logout
+- Protected routes
+- Conversation creation
+- Conversation persistence
+- Editable conversation titles
+- Gemini chat
+- Markdown rendering
+- Memory creation
+- Memory retrieval
+- Memory update/delete
+- Agent/tool calling
+- Feedback submission
+- Feedback adaptation
+- Memory dashboard
+- Mobile navigation
+
+## 6. Build and final verification
+
+Run:
+
+- Workspace typecheck
+- Frontend typecheck
+- Backend typecheck
+- Frontend production build
+- Backend production build
+- Full production build
+- Existing project tests, if any
+- `git diff --check`
+
+Restart affected workflows and inspect fresh API/browser logs.
+
+Do not claim a test passed unless it was actually executed.
+
+If a test cannot be executed because the environment lacks the required browser/test runner, clearly report that limitation.
+
+## Strict scope
+
+This phase is hardening only.
+
+Do NOT implement:
+
+- New AI capabilities
+- New memory features
+- New tools
+- New dashboard features
+- Streaming
+- External integrations
+- New databases
+- Agent frameworks
+- Phase 10 deployment/documentation work
+
+At the end, provide:
+
+1. Concrete vulnerabilities/issues found
+2. Fixes made
+3. Tests actually executed
+4. Tests that could not be executed and why
+5. Any remaining non-blocking warnings
+6. Confirmation that Phase 1–8 behavior was preserved
