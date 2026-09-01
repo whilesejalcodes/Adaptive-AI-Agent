@@ -1,4 +1,4 @@
-# Adaptive AI Agent interview demo
+# Adaptive AI Agent demo
 
 This is a 3–5 minute walkthrough of the strongest existing product and
 engineering decisions. Use a disposable demo account and remove its memories
