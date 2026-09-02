@@ -1,7 +1,6 @@
 # Adaptive AI Agent architecture
 
-This document describes the implementation in the repository. It intentionally
-does not describe features that are not present in the current codebase.
+This document describes the implementation in the repository. 
 
 ## 1. Frontend architecture
 
