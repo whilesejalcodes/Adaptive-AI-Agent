@@ -72,7 +72,6 @@ UID, and performs server-side Firestore, Gemini, and Qdrant operations.
 - `lib/api-client-react/` — generated React Query client
 - `lib/api-zod/` — generated server-side Zod schemas
 - `docs/ARCHITECTURE.md` — implementation architecture and data flow
-- `docs/DEMO.md` — short demonstration flow
 - `.env.example` — safe environment-variable reference
 
 ## Local development
